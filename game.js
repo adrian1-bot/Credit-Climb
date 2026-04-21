@@ -4505,16 +4505,22 @@ function renderTurnPanel() {
         <p class="turn-status">${status}</p>
         ${winner ? '<span class="winner-ribbon">Financial Freedom</span>' : ""}
       </div>
-      <span class="turn-pill" style="background:${scoreBand.color}18;color:${scoreBand.color};border-color:${scoreBand.color}55;">
-        ${scoreBand.label}
-      </span>
     </div>
 
-    <div class="turn-summary-strip">
-      <div class="turn-stat-pill">
-        <span>Credit</span>
-        <strong>${player.creditScore}</strong>
+    <!-- Credit Hero Card — credit is THE stat this game teaches, so it gets
+         visual dominance over all other personal stats. Score reads at ~3rem,
+         tier pill right-aligned, card border tinted by tier color. -->
+    <div class="credit-hero-card" style="--tier-color:${scoreBand.color};">
+      <span class="credit-hero-label">Credit Score</span>
+      <div class="credit-hero-row">
+        <span class="credit-hero-score">${player.creditScore}</span>
+        <span class="credit-hero-tier">${scoreBand.label}</span>
       </div>
+    </div>
+
+    <!-- Secondary stats — four equal pills in a 2x2 grid. Credit was
+         promoted to the hero card above, so it's not repeated here. -->
+    <div class="turn-summary-strip">
       <div class="turn-stat-pill">
         <span>Saved</span>
         <strong>${formatMoney(getSavings(player))}</strong>
@@ -4544,10 +4550,10 @@ function renderTurnPanel() {
     </div>
 
     <div class="action-row turn-action-row">
-      <button class="primary-button" id="roll-button" type="button" ${player.isAI || state.busy || !["ready", "reflection"].includes(state.phase) || !canAct ? "disabled" : ""}>
+      <button class="primary-button roll-hero" id="roll-button" type="button" ${player.isAI || state.busy || !["ready", "reflection"].includes(state.phase) || !canAct ? "disabled" : ""}>
         ${state.phase === "reflection" ? "End Reflection" : "Roll Dice"}
       </button>
-      <button class="secondary-button" id="hint-button" type="button" ${player.isAI || !canAct ? "disabled" : ""}>
+      <button class="secondary-button hint-satellite" id="hint-button" type="button" ${player.isAI || !canAct ? "disabled" : ""}>
         ${player.reflectionModeActive ? "Ask Advisor" : "Get Hint"}
       </button>
     </div>
