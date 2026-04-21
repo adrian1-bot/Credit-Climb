@@ -2534,8 +2534,10 @@ body.in-game .roadmap-copy span {
   transform-style: preserve-3d;
   transform: rotateX(-28deg) rotateY(-38deg);
   /* Bezier with slight overshoot (y2 > 1) creates the bounce-on-settle
-     the project brief calls for. Duration matches commit 3's ~1.0s roll. */
-  transition: transform 1s cubic-bezier(0.22, 0.82, 0.32, 1.12);
+     the project brief calls for. Duration is ~1.4s for extra anticipation
+     before the reveal — paired with 3-or-4 full spins per axis on the JS
+     side so the extra tumble time reads as a real roll, not a lazy rotation. */
+  transition: transform 1.4s cubic-bezier(0.22, 0.82, 0.32, 1.12);
 }
 
 /* Shared face styles. Each face is a 120×120 rounded square with a

@@ -782,6 +782,7 @@ function clearGameState() {
   state.winnerId = null;
   state.endingType = null;
   clearCreditFlash();
+  resetDiceTheater();
 }
 
 function serializeMissionForNetwork(mission) {
@@ -1648,6 +1649,107 @@ function randomFrom(list) {
 
 function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+// --------------------------------------------------------------------------
+// Dice animation (Phase B / Commit 3).
+//
+// The cube in the center of the board is a 3D CSS object whose <transform>
+// we drive via inline style. Each face has a known "face-forward" base
+// rotation (e.g. face 2 faces forward when the cube is at rotateX(-90)).
+// To land on value V with a pleasing 3D pose (not flat-on), we apply a
+// small consistent tilt offset to the base rotation.
+//
+// Between rolls we accumulate a large multi-turn spin so the cube visibly
+// tumbles every time, regardless of what value came before. Without the
+// accumulator, rolling the same number twice would show almost no motion.
+// --------------------------------------------------------------------------
+
+// Base face-forward + tilt for each rolled value. Tilt is a uniform
+// (-12deg X, -18deg Y) offset applied after the face-forward rotation, so
+// every landing shows the rolled face dominantly plus small peeks at
+// neighbors — never a flat pancake view.
+const DICE_FACE_TARGETS = {
+  1: { x: -12, y: -18 },
+  2: { x: -102, y: -18 },
+  3: { x: -12, y: -108 },
+  4: { x: -12, y: 72 },
+  5: { x: 78, y: -18 },
+  6: { x: -12, y: 162 },
+};
+
+const diceSpinAccumulator = { x: 0, y: 0 };
+
+async function playDiceRoll(value) {
+  const theater = document.getElementById("dice-theater");
+  const cube = document.getElementById("dice-cube");
+  if (!theater || !cube) {
+    return;
+  }
+  const safeValue = Number.isInteger(value) && value >= 1 && value <= 6 ? value : 1;
+  const target = DICE_FACE_TARGETS[safeValue];
+
+  // Add 3 or 4 FULL turns per axis (multiples of 360°) so the accumulator
+  // never drifts off a clean face-forward rotation. If this added a random
+  // partial amount (e.g. 720 + 0..179), the cube would land at
+  // faceTarget + drift and rest on a corner/edge instead of flush. Random
+  // choice between 3 or 4 full turns per axis keeps consecutive rolls from
+  // feeling identical without introducing drift, and paired with the ~1.4s
+  // tumble duration the extra rotation reads as a real roll.
+  const extraSpinsX = 3 + Math.floor(Math.random() * 2);
+  const extraSpinsY = 3 + Math.floor(Math.random() * 2);
+  diceSpinAccumulator.x += extraSpinsX * 360;
+  diceSpinAccumulator.y += extraSpinsY * 360;
+  const finalX = target.x + diceSpinAccumulator.x;
+  const finalY = target.y + diceSpinAccumulator.y;
+
+  // Apply the final transform and reveal the theater simultaneously. The
+  // cube's CSS transition (1s bezier with overshoot) does the tumble; the
+  // theater's opacity transition (~220ms) fades the dim backdrop in. Net
+  // effect: the cube appears to "drop into view" already mid-spin.
+  cube.style.transform = `rotateX(${finalX}deg) rotateY(${finalY}deg)`;
+  theater.classList.add("visible");
+  theater.setAttribute("aria-hidden", "false");
+
+  // Wait for the CSS transition (1400ms) plus a small cushion for the
+  // overshoot/bounce at the tail.
+  await delay(1440);
+
+  // Hold the landed face so players can actually read the result before
+  // the overlay clears. 800ms is long enough for a glance to register
+  // the number without feeling sluggish. Together with the tumble this
+  // puts the full dice sequence at ~2.1s — weighty and decisive per the
+  // brief, still short enough that 15 rounds × N players fits the
+  // playtest window.
+  await delay(800);
+
+  // Fade the theater out. The cube's inline transform persists — the
+  // next roll will accumulate more spin from this rotation, so the
+  // animation always continues forward and never jumps.
+  theater.classList.remove("visible");
+  theater.setAttribute("aria-hidden", "true");
+
+  // Await fade-out so the caller returns only after the overlay is
+  // fully gone and Table Talk is unobstructed again.
+  await delay(230);
+}
+
+// Hard-reset the dice theater on game restart so a partial roll can't
+// strand the overlay in a visible state. Called from clearGameState.
+function resetDiceTheater() {
+  const theater = document.getElementById("dice-theater");
+  const cube = document.getElementById("dice-cube");
+  if (theater) {
+    theater.classList.remove("visible");
+    theater.setAttribute("aria-hidden", "true");
+  }
+  if (cube) {
+    // Clear inline transform so the cube falls back to the CSS resting
+    // pose on the next game's first roll.
+    cube.style.transform = "";
+  }
+  diceSpinAccumulator.x = 0;
+  diceSpinAccumulator.y = 0;
 }
 
 function stepPlayerBack(player, steps = 1) {
@@ -4282,6 +4384,8 @@ async function runTurn(player) {
     const roll = getRollOutcome(player);
     state.lastDie = roll.value;
     state.lastRollNote = roll.note;
+    renderAll();
+    await playDiceRoll(roll.value);
     logEvent("Dice Roll", roll.message);
     renderAll();
     await movePlayer(player, roll.value);
