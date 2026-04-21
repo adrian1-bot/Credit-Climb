@@ -534,15 +534,19 @@ h3 {
 
 .space-name {
   margin: 8px 0 4px;
-  font-size: 0.95rem;
-  line-height: 1.1;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  font-weight: 700;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
 }
 
+/* Legacy class — .space-brief no longer rendered on tiles; active-space
+   blurb now lives in the center card's active-space-banner.
+   Kept here to safely no-op any residual markup until next cache cycle. */
 .space-brief {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.25;
+  display: none;
 }
 
 .space-footer {
@@ -1430,11 +1434,8 @@ button.credit-flash-card {
   }
 
   .space-name {
-    font-size: 0.84rem;
-  }
-
-  .space-brief {
-    font-size: 0.7rem;
+    font-size: 0.76rem;
+    line-height: 1.15;
   }
 
   .turn-metrics {
@@ -2058,6 +2059,19 @@ body.in-game .roadmap-copy span {
 }
 .player-card.compact .player-card-header {
   align-items: center;
+  min-width: 0;
+}
+/* Name row must be allowed to shrink so the credit score never gets
+   pushed outside the card's right edge. */
+.player-card.compact .player-name-row {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.player-card.compact .player-name-row > div {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 .player-card.compact .player-name-row h3 {
   font-size: 0.95rem;
@@ -2065,6 +2079,15 @@ body.in-game .roadmap-copy span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Credit score never compresses — it wins the flex fight over the name. */
+.player-card.compact .player-credit-big {
+  flex-shrink: 0;
 }
 .player-card.compact .ai-chip {
   display: inline-flex;
@@ -2149,4 +2172,171 @@ body.in-game .roadmap-copy span {
     margin-left: 0;
     justify-content: flex-start;
   }
+}
+
+/* ==========================================================================
+   Table Talk — structural rework (Bug Round 3, Issue 3).
+   Goals:
+   - Collapse game-start profile intros into a one-time <details> banner so
+     they don't dominate the feed at equal weight with live-play events.
+   - Surface where the current player landed via an active-space banner
+     above the latest-event card (replaces the per-tile .space-brief that
+     got clipped by the narrow board perimeter).
+   - Let content flow naturally inside the center card rather than feeling
+     oversized when only 2–4 messages exist.
+   ========================================================================== */
+
+/* The .event-spotlight element was the decorated "latest event" card. It
+   now acts as a column container so the active-space banner, the setup
+   banner, and the latest-event card can stack cleanly. The decorative
+   treatment moves onto .event-spotlight-card. */
+.event-spotlight {
+  background: none;
+  border: none;
+  padding: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.event-spotlight-card {
+  border-radius: 18px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(31, 68, 102, 0.12), rgba(255, 255, 255, 0.54));
+  border: 2px solid rgba(31, 43, 58, 0.16);
+}
+
+.event-spotlight-card h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.event-spotlight-card p {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.event-spotlight-card.event-spotlight-empty h3 {
+  color: var(--ink);
+  opacity: 0.75;
+}
+
+/* Active-space banner — "Where [Name] landed: [Space]" with the space's
+   accent color as a left border stripe. Low visual weight so it informs
+   without competing with the latest event. */
+.active-space-banner {
+  border-radius: 14px;
+  padding: 10px 12px 10px 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(31, 43, 58, 0.12);
+  border-left: 4px solid var(--space-accent, var(--gold));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.active-space-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(31, 43, 58, 0.6);
+  font-weight: 700;
+}
+
+.active-space-headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.active-space-badge {
+  display: inline-flex;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--space-accent, var(--gold));
+  color: #fffaf0;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.active-space-name {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.active-space-blurb {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+/* Setup banner — collapsed by default. Houses one-time profile intros
+   so they don't stretch the feed or compete with play events. */
+.setup-banner {
+  border-radius: 12px;
+  background: rgba(215, 167, 61, 0.08);
+  border: 1px solid rgba(215, 167, 61, 0.28);
+  padding: 0;
+}
+
+.setup-banner > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: rgba(31, 43, 58, 0.72);
+  list-style: none;
+  user-select: none;
+}
+
+.setup-banner > summary::-webkit-details-marker {
+  display: none;
+}
+
+.setup-banner > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+  transform-origin: center;
+}
+
+.setup-banner[open] > summary::before {
+  content: "▾";
+}
+
+.setup-banner-list {
+  padding: 2px 12px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.setup-banner-entry {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.setup-banner-entry strong {
+  display: inline;
+  color: var(--ink);
+  font-weight: 700;
+  margin-right: 4px;
 }

@@ -1828,8 +1828,8 @@ function createTurnFlags() {
   };
 }
 
-function logEvent(title, body) {
-  state.log.unshift({ title, body });
+function logEvent(title, body, kind = "play") {
+  state.log.unshift({ title, body, kind });
   state.log = state.log.slice(0, 40);
 }
 
@@ -1954,7 +1954,8 @@ function startGame(humanNames, aiCount) {
   players.forEach((player) => {
     logEvent(
       player.name,
-      `${player.name} starts with ${formatMoney(player.cash)} cash, a ${player.creditScore} score, the "${player.background.name}" background, and a ${player.career.name} income path.`
+      `${player.name} starts with ${formatMoney(player.cash)} cash, a ${player.creditScore} score, the "${player.background.name}" background, and a ${player.career.name} income path.`,
+      "setup"
     );
   });
 
@@ -4374,7 +4375,6 @@ function renderBoard() {
         <div>
           <span class="space-badge">${space.badge}</span>
           <h3 class="space-name">${space.name}</h3>
-          ${active ? `<p class="space-brief">${space.blurb}</p>` : ""}
         </div>
         <div class="space-footer">
           <span class="space-index">${String(index + 1).padStart(2, "0")}</span>
@@ -4687,19 +4687,78 @@ function renderPlayersPanel() {
 }
 
 function renderBoardFeed() {
-  const latest = state.log[0];
+  // Segregate one-time setup events (profile intros) from live play-by-play.
+  // Setup events clutter the main feed at equal weight with actual decisions,
+  // so they get a collapsed banner and the main feed shows only play events.
+  const playLog = state.log.filter((entry) => entry.kind !== "setup");
+  const setupLog = state.log.filter((entry) => entry.kind === "setup");
+  const latest = playLog[0];
+  const currentPlayer = getCurrentPlayer();
+  const currentSpace =
+    currentPlayer && typeof currentPlayer.position === "number"
+      ? BOARD_SPACES[currentPlayer.position]
+      : null;
 
-  elements.eventSpotlight.innerHTML = latest
+  // Active-space banner — shows where the current player just landed.
+  // This replaces the per-tile .space-brief that was getting clipped by
+  // the narrow perimeter card width.
+  const activeSpaceMarkup =
+    currentPlayer && currentSpace
+      ? `
+        <div class="active-space-banner" style="--space-accent:${SPACE_ACCENTS[currentSpace.kind] || "var(--gold)"};">
+          <span class="active-space-label">Where ${currentPlayer.name} landed</span>
+          <div class="active-space-headline">
+            <span class="active-space-badge">${currentSpace.badge}</span>
+            <h3 class="active-space-name">${currentSpace.name}</h3>
+          </div>
+          <p class="active-space-blurb">${currentSpace.blurb}</p>
+        </div>
+      `
+      : "";
+
+  // Collapsed banner for game-start profile intros. Closed by default so it
+  // doesn't dominate the feed once play has begun.
+  const setupMarkup = setupLog.length
     ? `
-        <h3>${latest.title}</h3>
-        <p>${truncateText(latest.body, 175)}</p>
+        <details class="setup-banner">
+          <summary>Game started — ${setupLog.length} ${setupLog.length === 1 ? "player" : "players"} at the table</summary>
+          <div class="setup-banner-list">
+            ${setupLog
+              .map(
+                (entry) => `
+                  <div class="setup-banner-entry">
+                    <strong>${entry.title}</strong>
+                    <span>${entry.body}</span>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        </details>
+      `
+    : "";
+
+  const spotlightCardMarkup = latest
+    ? `
+        <div class="event-spotlight-card">
+          <h3>${latest.title}</h3>
+          <p>${truncateText(latest.body, 175)}</p>
+        </div>
       `
     : `
-        <h3>Welcome to Credit Climb</h3>
-        <p>Roll to start the game. The latest table-wide update will appear here.</p>
+        <div class="event-spotlight-card event-spotlight-empty">
+          <h3>Welcome to the table</h3>
+          <p>Roll the dice to begin. Play-by-play updates will land here.</p>
+        </div>
       `;
 
-  elements.eventFeed.innerHTML = state.log
+  elements.eventSpotlight.innerHTML = `
+    ${activeSpaceMarkup}
+    ${setupMarkup}
+    ${spotlightCardMarkup}
+  `;
+
+  elements.eventFeed.innerHTML = playLog
     .slice(1, 4)
     .map(
       (entry) => `
