@@ -562,8 +562,8 @@ const MISSION_LIBRARY = [
 const REFLECTION_SCORE = 550;
 const DOUBLE_ROLL_UNLOCK_SCORE = 775;
 const BACKGROUND_MUSIC_PATH = "./background-music.mp3";
-const MAX_CREDIT_GAIN_PER_TURN = 16;
-const MAX_CREDIT_DROP_PER_TURN = 36;
+const MAX_CREDIT_GAIN_PER_TURN = 5;
+const MAX_CREDIT_DROP_PER_TURN = 60;
 
 const state = {
   players: [],
@@ -1949,8 +1949,8 @@ function calculateCreditProfile(player) {
   const derogatoryWeight = getDerogatoryMarkWeight(player);
   const paymentScore = clamp01(
     1
-      - Math.min(0.48, player.missedPaymentCount * 0.12)
-      - (player.recentMissedPayment ? 0.06 : 0)
+      - Math.min(0.55, player.missedPaymentCount * 0.06)
+      - (player.recentMissedPayment ? 0.07 : 0)
       - minimumOnlyPenalty
       + cleanTurnBonus
       + fullPaymentBonus
@@ -1958,7 +1958,7 @@ function calculateCreditProfile(player) {
   const utilizationScore = getUtilizationBandScore(utilization);
   const derogatoryScore = clamp01(
     1
-      - derogatoryWeight * 0.07
+      - derogatoryWeight * 0.09
       + Math.min(0.12, player.cleanTurnStreak * 0.02)
   );
   let debtScore = clamp01(1 - player.loanBalance / 5500);
