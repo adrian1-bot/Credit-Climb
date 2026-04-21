@@ -717,7 +717,7 @@ h3 {
 
 .turn-summary-strip {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
@@ -1477,9 +1477,23 @@ button.credit-flash-card {
 
 /* ----- Wellbeing UI ----- */
 
+.wellbeing-pill span {
+  letter-spacing: 0.04em;
+  font-size: 0.64rem;
+}
+
 .wellbeing-pill strong {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   letter-spacing: 0.01em;
+  line-height: 1.15;
+  white-space: normal;
+  word-break: keep-all;
+}
+
+.turn-stat-pill span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .turn-stat-pill.wellbeing-tier-stressed {
