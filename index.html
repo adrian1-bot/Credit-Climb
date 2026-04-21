@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Credit Climb</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero-banner">
+        <div class="hero-content">
+          <p class="eyebrow">Browser Board Game</p>
+          <h1>Credit Climb</h1>
+          <p class="hero-copy">
+            Roll through early adulthood, build your credit, unlock better
+            opportunities, and reach Financial Freedom before your rivals do.
+          </p>
+          <details class="rulebook-dropdown">
+            <summary>Rulebook and Foundations of Life</summary>
+            <div class="rulebook-content">
+              <div class="rulebook-block">
+                <h2>How A Turn Works</h2>
+                <p>1. You collect income and cover recurring bills.</p>
+                <p>2. Your credit shifts based on payments, utilization, debt pressure, and negative marks.</p>
+                <p>3. You roll the dice and land on a life, credit, housing, transport, crisis, or growth space.</p>
+                <p>4. Your choices shape savings, debt, and milestone progress.</p>
+              </div>
+              <div class="rulebook-block">
+                <h2>Foundations of Life</h2>
+                <p><strong>Stability:</strong> housing and an emergency fund.</p>
+                <p><strong>Mobility:</strong> transportation that is useful and not a trap.</p>
+                <p><strong>Growth:</strong> a side hustle, investing, or another future asset.</p>
+                <p><strong>Security:</strong> strong credit and surviving setbacks without collapse.</p>
+              </div>
+              <div class="rulebook-block">
+                <h2>How You Win</h2>
+                <p>Reach Financial Freedom by finishing all six goals shown in the roadmap panel: stability, mobility, growth, security, savings, and debt control.</p>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="hero-rail">
+          <section class="hero-panel hero-setup">
+            <div class="panel-heading">
+              <h2>New Game</h2>
+              <button id="new-game-button" class="secondary-button" type="button">
+                Restart
+              </button>
+            </div>
+            <section class="live-room-panel">
+              <div class="panel-heading live-room-heading">
+                <h3>Live Room</h3>
+                <span class="live-room-pill" id="live-connection-pill">Local Mode</span>
+              </div>
+              <p class="setup-note" id="live-status">
+                Create a live room or join one with a code. The host keeps the shared session running.
+              </p>
+              <label>
+                Room code
+                <input id="room-code" name="roomCode" type="text" maxlength="5" placeholder="ABCDE" />
+              </label>
+              <div class="action-row live-room-actions">
+                <button id="create-room-button" class="secondary-button" type="button">Create Room</button>
+                <button id="join-room-button" class="secondary-button" type="button">Join Room</button>
+                <button id="leave-room-button" class="secondary-button" type="button" disabled>Leave Room</button>
+              </div>
+              <div class="live-room-meta" id="live-room-meta"></div>
+              <div class="live-room-members" id="live-room-members"></div>
+            </section>
+            <form id="setup-form" class="setup-form">
+              <label>
+                Player 1 / display name
+                <input id="player-name" name="playerName" type="text" maxlength="18" value="You" />
+              </label>
+              <label class="human-count-label">
+                Players on this device
+                <select id="human-count" name="humanCount">
+                  <option value="1" selected>1 person</option>
+                  <option value="2">2 people</option>
+                  <option value="3">3 people</option>
+                  <option value="4">4 people</option>
+                </select>
+              </label>
+              <div id="extra-human-fields" class="extra-human-fields"></div>
+              <label class="ai-count-label">
+                AI rivals
+                <select id="ai-count" name="aiCount">
+                  <option value="0">0 rivals</option>
+                  <option value="1">1 rival</option>
+                  <option value="2" selected>2 rivals</option>
+                  <option value="3">3 rivals</option>
+                </select>
+              </label>
+              <p class="setup-note">
+                Local hot-seat still works here. Live rooms let each person join from their own browser, and the host can also keep the game moving if someone disconnects.
+              </p>
+              <button class="primary-button" type="submit">Deal the Board</button>
+            </form>
+            <div class="setup-extras">
+              <button class="secondary-button setup-music-button" id="music-button" type="button" aria-pressed="false">
+                Start Music
+              </button>
+              <p class="music-note" id="music-note">Music will begin after your next click in the game.</p>
+            </div>
+          </section>
+
+          <div class="hero-stats" id="hero-stats"></div>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <section class="board-panel">
+          <div class="board-frame">
+            <div class="board-grid" id="board"></div>
+            <div class="board-center">
+              <div class="center-card">
+                <p class="center-kicker">Center Feed</p>
+                <h2>Table Talk</h2>
+                <p class="center-copy">
+                  The latest landing, decision, and setback shows up here so
+                  everyone at the table can follow what just happened.
+                </p>
+                <div class="event-spotlight" id="event-spotlight"></div>
+                <div class="event-feed" id="event-feed"></div>
+              </div>
+            </div>
+          </div>
+          <section class="panel roadmap-panel" id="goal-panel"></section>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel turn-panel" id="turn-panel"></section>
+          <section class="panel players-panel" id="players-panel"></section>
+        </aside>
+      </main>
+    </div>
+
+    <div class="modal-shell hidden" id="modal-shell" aria-hidden="true">
+      <div class="modal-card" id="modal-card"></div>
+    </div>
+    <div class="credit-flash" id="credit-flash" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="./game.js"></script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "credit-climb",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static browser board game about credit, choices, and financial freedom.",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "start": "node scripts/dev-server.mjs",
+    "check": "node scripts/check-static-site.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

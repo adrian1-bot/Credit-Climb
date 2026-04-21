@@ -1,0 +1,4641 @@
+const SCORE_TRACK = [
+  { label: "Below 580", description: "Denied often, high fees, risky offers." },
+  { label: "580 - 669", description: "Basic approvals, but borrowing stays expensive." },
+  { label: "670 - 739", description: "Decent options, normal rates, common milestones." },
+  { label: "740 - 799", description: "Strong options, lower rates, easier recovery." },
+  { label: "800+", description: "Premium approvals, best prices, bonus protection." },
+];
+
+const PLAYER_COLORS = ["#d7644a", "#1f6ba5", "#5f8f3d", "#b94d65"];
+const AI_NAMES = ["Ava", "Marcus", "Nia", "Leo", "Sage", "Jordan", "Mila", "Theo"];
+
+const BACKGROUNDS = [
+  {
+    id: "family-support",
+    name: "Strong Family Support",
+    description: "Extra savings and a softer landing while you learn the ropes.",
+    cash: 1350,
+    emergencyFund: 260,
+    creditScore: 650,
+    loanBalance: 0,
+    cardBalance: 80,
+    knowledge: 0,
+    shields: 0,
+  },
+  {
+    id: "no-safety-net",
+    name: "No Financial Safety Net",
+    description: "Less room for mistakes, but more urgency to build smart habits.",
+    cash: 860,
+    emergencyFund: 0,
+    creditScore: 590,
+    loanBalance: 120,
+    cardBalance: 170,
+    knowledge: 1,
+    shields: 1,
+  },
+  {
+    id: "scholarship",
+    name: "Scholarship Student",
+    description: "Lower debt pressure with strong upside if you stay disciplined.",
+    cash: 1020,
+    emergencyFund: 120,
+    creditScore: 630,
+    loanBalance: 90,
+    cardBalance: 120,
+    knowledge: 1,
+    shields: 0,
+  },
+  {
+    id: "medical-burden",
+    name: "Medical Expense Burden",
+    description: "A rough first chapter with more debt and more risk.",
+    cash: 920,
+    emergencyFund: 40,
+    creditScore: 575,
+    loanBalance: 430,
+    cardBalance: 180,
+    knowledge: 0,
+    shields: 1,
+  },
+  {
+    id: "mentor-network",
+    name: "Community Mentor Network",
+    description: "Guidance helps you avoid traps and recover quickly.",
+    cash: 980,
+    emergencyFund: 180,
+    creditScore: 640,
+    loanBalance: 110,
+    cardBalance: 80,
+    knowledge: 2,
+    shields: 0,
+  },
+];
+
+const CREDIT_HISTORY_SEEDS = {
+  "family-support": {
+    creditLimit: 340,
+    missedPaymentCount: 3,
+    lateCardMarks: 1,
+    lateLoanMarks: 0,
+    housingDefaultMarks: 0,
+    transportDefaultMarks: 0,
+    badLoanMarks: 0,
+    unresolvedBillingMarks: 1,
+    cleanTurnStreak: 1,
+  },
+  "no-safety-net": {
+    creditLimit: 300,
+    missedPaymentCount: 3,
+    lateCardMarks: 1,
+    lateLoanMarks: 1,
+    housingDefaultMarks: 0,
+    transportDefaultMarks: 0,
+    badLoanMarks: 0,
+    unresolvedBillingMarks: 1,
+    cleanTurnStreak: 0,
+  },
+  scholarship: {
+    creditLimit: 320,
+    missedPaymentCount: 3,
+    lateCardMarks: 1,
+    lateLoanMarks: 0,
+    housingDefaultMarks: 0,
+    transportDefaultMarks: 0,
+    badLoanMarks: 0,
+    unresolvedBillingMarks: 1,
+    cleanTurnStreak: 0,
+  },
+  "medical-burden": {
+    creditLimit: 280,
+    missedPaymentCount: 3,
+    lateCardMarks: 1,
+    lateLoanMarks: 1,
+    housingDefaultMarks: 0,
+    transportDefaultMarks: 1,
+    badLoanMarks: 0,
+    unresolvedBillingMarks: 1,
+    cleanTurnStreak: 0,
+  },
+  "mentor-network": {
+    creditLimit: 330,
+    missedPaymentCount: 3,
+    lateCardMarks: 1,
+    lateLoanMarks: 1,
+    housingDefaultMarks: 0,
+    transportDefaultMarks: 0,
+    badLoanMarks: 0,
+    unresolvedBillingMarks: 1,
+    cleanTurnStreak: 1,
+  },
+};
+
+const CAREERS = [
+  { id: "apprentice", name: "Apprenticeship", income: 1160, description: "Steady pay, strong growth." },
+  { id: "retail-lead", name: "Retail Team Lead", income: 1240, description: "Solid pay with room to save." },
+  { id: "health-trainee", name: "Healthcare Trainee", income: 1210, description: "Reliable income and stability." },
+  { id: "it-support", name: "IT Support", income: 1320, description: "Strong paycheck and future upside." },
+  { id: "freelance-creative", name: "Freelance Creative", income: 1080, description: "Flexible, but income swings." },
+  { id: "warehouse-supervisor", name: "Warehouse Supervisor", income: 1280, description: "Dependable money, heavier workload." },
+];
+
+const BOARD_SPACES = [
+  { id: "fresh-start", name: "Fresh Start", kind: "start", badge: "Start", blurb: "Collect a yearly bump when you pass." },
+  { id: "money-mission", name: "Money Mission", kind: "mission", badge: "Mission", blurb: "Draw a mini-goal for a reward." },
+  { id: "credit-choices", name: "Credit Choices", kind: "credit", badge: "Credit", blurb: "Shape how you manage utilization and payments." },
+  { id: "life-happens-1", name: "Life Happens", kind: "life", badge: "Event", blurb: "Everyday choices can help or hurt." },
+  { id: "approval-avenue", name: "Approval Avenue", kind: "opportunity", badge: "Unlock", blurb: "Higher scores open better doors." },
+  { id: "savings-sprint", name: "Savings Sprint", kind: "savings", badge: "Save", blurb: "Bank cash or reduce debt." },
+  { id: "home-base", name: "Home Base", kind: "housing", badge: "Housing", blurb: "Work toward stable housing." },
+  { id: "credit-bureau", name: "Credit Bureau", kind: "knowledge", badge: "Learn", blurb: "Gain protection and smart habits." },
+  { id: "shopping-spree", name: "Shopping Spree", kind: "lifestyle", badge: "Spend", blurb: "Temptation is always nearby." },
+  { id: "wheel-deal", name: "Wheel Deal", kind: "transport", badge: "Mobility", blurb: "Choose your ride wisely." },
+  { id: "rainy-day", name: "Rainy Day", kind: "crisis", badge: "Crisis", blurb: "An emergency tests your plan." },
+  { id: "next-level", name: "Next Level", kind: "opportunity", badge: "Unlock", blurb: "See what your score can reach." },
+  { id: "tax-refund", name: "Tax Refund", kind: "refund", badge: "Bonus", blurb: "A little breathing room." },
+  { id: "milestone-move", name: "Milestone Move", kind: "mission", badge: "Mission", blurb: "Advance your long game." },
+  { id: "utilization-check", name: "Utilization Check", kind: "credit", badge: "Credit", blurb: "Pay down balances or tighten habits." },
+  { id: "life-happens-2", name: "Life Twist", kind: "life", badge: "Event", blurb: "Unexpected situations keep coming." },
+  { id: "loan-shop", name: "Loan Shop", kind: "loan", badge: "Borrow", blurb: "Compare good and bad borrowing." },
+  { id: "emergency-fund", name: "Emergency Fund", kind: "savings", badge: "Save", blurb: "Protect future-you before trouble hits." },
+  { id: "neighborhood-upgrade", name: "Neighborhood Upgrade", kind: "housing", badge: "Housing", blurb: "Upgrade or stabilize where you live." },
+  { id: "money-class", name: "Money Class", kind: "knowledge", badge: "Learn", blurb: "Turn knowledge into leverage." },
+  { id: "future-bet", name: "Future Bet", kind: "growth", badge: "Growth", blurb: "Start investing or launch a side hustle." },
+  { id: "hard-luck", name: "Hard Luck", kind: "setback", badge: "Setback", blurb: "No choices here. A random setback leaves lasting damage on your credit profile." },
+  { id: "second-chance", name: "Second Chance", kind: "repair", badge: "Repair", blurb: "Patch damage and rebuild momentum." },
+  { id: "freedom-check", name: "Freedom Check", kind: "freedom", badge: "Goal", blurb: "See how close you are to winning." },
+];
+
+const BOARD_COORDINATES = [
+  [1, 1],
+  [1, 2],
+  [1, 3],
+  [1, 4],
+  [1, 5],
+  [1, 6],
+  [1, 7],
+  [2, 7],
+  [3, 7],
+  [4, 7],
+  [5, 7],
+  [6, 7],
+  [7, 7],
+  [7, 6],
+  [7, 5],
+  [7, 4],
+  [7, 3],
+  [7, 2],
+  [7, 1],
+  [6, 1],
+  [5, 1],
+  [4, 1],
+  [3, 1],
+  [2, 1],
+];
+
+const SPACE_ACCENTS = {
+  start: "#d7a73d",
+  mission: "#5f8f3d",
+  credit: "#1f6ba5",
+  life: "#d7644a",
+  opportunity: "#2d7d7d",
+  savings: "#7c9a42",
+  housing: "#b94d65",
+  knowledge: "#7ec7de",
+  lifestyle: "#ef9b4f",
+  transport: "#34706f",
+  crisis: "#c85a40",
+  setback: "#9f4133",
+  refund: "#d7a73d",
+  loan: "#8f5e3b",
+  growth: "#5d7db5",
+  repair: "#6f5ba8",
+  freedom: "#23374f",
+};
+
+const DECISION_ART_LIBRARY = {
+  generic: {
+    label: "Table Moment",
+    start: "#37526d",
+    end: "#1f3448",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="28" y="32" width="184" height="104" rx="22" fill="rgba(255,249,236,0.16)" stroke="rgba(255,249,236,0.45)" stroke-width="4" />
+        <circle cx="76" cy="80" r="24" fill="#7ec7de" opacity="0.9" />
+        <circle cx="164" cy="70" r="18" fill="#d7a73d" opacity="0.95" />
+        <path d="M58 116 C88 84 132 84 182 48" fill="none" stroke="#fff9ec" stroke-width="8" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  credit: {
+    label: "Credit Move",
+    start: "#315d85",
+    end: "#21415d",
+    panel: "rgba(255, 255, 255, 0.14)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="28" y="48" width="126" height="76" rx="16" fill="#1f2b3a" />
+        <rect x="28" y="68" width="126" height="16" fill="#7ec7de" opacity="0.75" />
+        <circle cx="185" cy="55" r="23" fill="#d7a73d" />
+        <path d="M174 55 l9 9 18 -22" fill="none" stroke="#1f2b3a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M52 122 C92 104 126 112 186 78" fill="none" stroke="#fff9ec" stroke-width="8" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  shopping: {
+    label: "Shopping Trip",
+    start: "#d98948",
+    end: "#bb6245",
+    panel: "rgba(255, 249, 236, 0.18)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <path d="M66 50 h42 l-6 74 h-30 z" fill="#fff9ec" />
+        <path d="M134 44 h40 l8 80 h-52 z" fill="#f7d57f" />
+        <path d="M78 50 C78 34 96 30 104 42" fill="none" stroke="#315d85" stroke-width="6" stroke-linecap="round" />
+        <path d="M144 44 C144 26 170 24 174 42" fill="none" stroke="#315d85" stroke-width="6" stroke-linecap="round" />
+        <path d="M52 122 C82 118 106 112 132 122 C156 132 172 132 192 122" fill="#315d85" />
+        <path d="M48 120 C76 108 110 104 134 114 C154 122 171 122 198 112" fill="none" stroke="#fff9ec" stroke-width="6" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  phone: {
+    label: "Phone Upgrade",
+    start: "#5684b0",
+    end: "#34536e",
+    panel: "rgba(255, 255, 255, 0.12)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="84" y="16" width="72" height="128" rx="16" fill="#1f2b3a" />
+        <rect x="92" y="28" width="56" height="96" rx="10" fill="#7ec7de" />
+        <circle cx="120" cy="134" r="6" fill="#fff9ec" />
+        <circle cx="174" cy="58" r="22" fill="#d7a73d" opacity="0.95" />
+        <path d="M165 58 h18" stroke="#1f2b3a" stroke-width="6" stroke-linecap="round" />
+        <path d="M174 49 v18" stroke="#1f2b3a" stroke-width="6" stroke-linecap="round" />
+        <path d="M105 56 h30" stroke="#fff9ec" stroke-width="6" stroke-linecap="round" />
+        <path d="M105 74 h22" stroke="#fff9ec" stroke-width="6" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  savings: {
+    label: "Savings Move",
+    start: "#698947",
+    end: "#496130",
+    panel: "rgba(255, 249, 236, 0.18)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <path d="M70 48 h100 a16 16 0 0 1 16 16 v42 a26 26 0 0 1 -26 26 h-80 a26 26 0 0 1 -26 -26 v-42 a16 16 0 0 1 16 -16 z" fill="#fff9ec" />
+        <path d="M92 48 c4 -18 20 -28 42 -28 c20 0 34 8 42 22" fill="none" stroke="#d7a73d" stroke-width="8" stroke-linecap="round" />
+        <circle cx="120" cy="92" r="20" fill="#d7a73d" />
+        <path d="M120 78 v28" stroke="#496130" stroke-width="6" stroke-linecap="round" />
+        <path d="M109 86 c4 -4 18 -4 22 0 c4 4 0 10 -11 12 c-11 2 -15 8 -10 13 c5 5 18 5 24 0" fill="none" stroke="#496130" stroke-width="5" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  housing: {
+    label: "Housing Move",
+    start: "#bd6374",
+    end: "#8e4259",
+    panel: "rgba(255, 249, 236, 0.18)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <path d="M42 78 l78 -48 l78 48" fill="none" stroke="#fff9ec" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+        <rect x="60" y="74" width="120" height="64" rx="10" fill="#fff9ec" />
+        <rect x="109" y="94" width="22" height="44" rx="6" fill="#8e4259" />
+        <rect x="78" y="90" width="18" height="18" rx="4" fill="#d7a73d" />
+        <rect x="144" y="90" width="18" height="18" rx="4" fill="#d7a73d" />
+      </svg>
+    `,
+  },
+  transport: {
+    label: "Mobility Move",
+    start: "#377770",
+    end: "#214f57",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <path d="M44 112 h150 c8 0 14 -6 14 -14 v-14 c0 -8 -6 -14 -14 -14 h-12 l-16 -24 h-52 l-26 24 h-44 z" fill="#fff9ec" />
+        <circle cx="94" cy="114" r="18" fill="#1f2b3a" />
+        <circle cx="176" cy="114" r="18" fill="#1f2b3a" />
+        <circle cx="94" cy="114" r="8" fill="#d7a73d" />
+        <circle cx="176" cy="114" r="8" fill="#d7a73d" />
+        <rect x="110" y="54" width="42" height="16" rx="6" fill="#7ec7de" />
+      </svg>
+    `,
+  },
+  growth: {
+    label: "Growth Move",
+    start: "#5a79b0",
+    end: "#32496f",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="54" y="86" width="24" height="42" rx="6" fill="#fff9ec" />
+        <rect x="92" y="68" width="24" height="60" rx="6" fill="#d7a73d" />
+        <rect x="130" y="50" width="24" height="78" rx="6" fill="#7ec7de" />
+        <path d="M52 118 C88 92 116 88 184 42" fill="none" stroke="#fff9ec" stroke-width="8" stroke-linecap="round" />
+        <path d="M170 40 h18 v18" fill="none" stroke="#fff9ec" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    `,
+  },
+  loan: {
+    label: "Loan Choice",
+    start: "#98653d",
+    end: "#6b4527",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="54" y="28" width="90" height="104" rx="14" fill="#fff9ec" />
+        <path d="M118 28 h26 v26" fill="#f4d8a1" />
+        <path d="M76 62 h48" stroke="#6b4527" stroke-width="8" stroke-linecap="round" />
+        <path d="M76 84 h34" stroke="#6b4527" stroke-width="8" stroke-linecap="round" />
+        <path d="M162 100 l20 -38 l20 38 z" fill="#d7644a" />
+        <path d="M182 80 v14" stroke="#fff9ec" stroke-width="6" stroke-linecap="round" />
+        <circle cx="182" cy="100" r="3.5" fill="#fff9ec" />
+      </svg>
+    `,
+  },
+  repair: {
+    label: "Repair Move",
+    start: "#7561ab",
+    end: "#50417a",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <path d="M120 30 l52 18 v34 c0 28 -18 46 -52 58 c-34 -12 -52 -30 -52 -58 v-34 z" fill="#fff9ec" />
+        <path d="M96 88 l16 16 l34 -38" fill="none" stroke="#7561ab" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="176" cy="50" r="18" fill="#d7a73d" />
+        <path d="M168 50 h16" stroke="#50417a" stroke-width="6" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  unlock: {
+    label: "Strong Credit",
+    start: "#2c7d7d",
+    end: "#21555a",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <path d="M66 128 v-86 h48 v86 z" fill="#fff9ec" />
+        <path d="M114 42 l46 24 v62 l-46 -24 z" fill="#d7a73d" />
+        <circle cx="100" cy="84" r="5" fill="#2c7d7d" />
+        <path d="M168 42 l18 18 l-18 18" fill="none" stroke="#fff9ec" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    `,
+  },
+  billing: {
+    label: "Statement Alert",
+    start: "#b56253",
+    end: "#80453c",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="66" y="22" width="90" height="114" rx="14" fill="#fff9ec" />
+        <path d="M86 56 h50" stroke="#80453c" stroke-width="8" stroke-linecap="round" />
+        <path d="M86 80 h36" stroke="#80453c" stroke-width="8" stroke-linecap="round" />
+        <circle cx="178" cy="96" r="24" fill="#d7a73d" />
+        <path d="M178 84 v18" stroke="#80453c" stroke-width="7" stroke-linecap="round" />
+        <circle cx="178" cy="108" r="4" fill="#80453c" />
+      </svg>
+    `,
+  },
+  support: {
+    label: "Support Arrives",
+    start: "#4f8666",
+    end: "#365b46",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <path d="M44 104 c18 -12 38 -10 52 8 h32 c10 0 18 8 18 18 h-70 c-12 0 -24 -4 -32 -12 z" fill="#fff9ec" />
+        <path d="M196 104 c-18 -12 -38 -10 -52 8 h-32 c-10 0 -18 8 -18 18 h70 c12 0 24 -4 32 -12 z" fill="#fff9ec" />
+        <circle cx="120" cy="74" r="24" fill="#d7a73d" />
+        <path d="M120 60 v28" stroke="#365b46" stroke-width="7" stroke-linecap="round" />
+        <path d="M108 68 c4 -4 18 -4 22 0 c4 4 0 10 -11 12 c-11 2 -15 8 -10 13 c5 5 18 5 24 0" fill="none" stroke="#365b46" stroke-width="5" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  training: {
+    label: "Skill Upgrade",
+    start: "#5e8aac",
+    end: "#3d5d7b",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="48" y="38" width="110" height="74" rx="12" fill="#fff9ec" />
+        <rect x="88" y="112" width="34" height="10" rx="5" fill="#fff9ec" />
+        <rect x="80" y="122" width="50" height="8" rx="4" fill="#d7a73d" />
+        <path d="M176 48 l18 10 v20 l-18 10 l-18 -10 v-20 z" fill="#d7a73d" />
+        <path d="M176 88 v18" stroke="#fff9ec" stroke-width="6" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  medical: {
+    label: "Emergency Bill",
+    start: "#bc6050",
+    end: "#863f35",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="58" y="34" width="56" height="92" rx="18" fill="#fff9ec" />
+        <path d="M86 52 v56" stroke="#d7644a" stroke-width="14" stroke-linecap="round" />
+        <path d="M58 80 h56" stroke="#d7644a" stroke-width="14" stroke-linecap="round" />
+        <rect x="136" y="42" width="46" height="74" rx="12" fill="#f4d8a1" />
+        <path d="M148 62 h22" stroke="#863f35" stroke-width="8" stroke-linecap="round" />
+        <path d="M148 82 h16" stroke="#863f35" stroke-width="8" stroke-linecap="round" />
+      </svg>
+    `,
+  },
+  paycheck: {
+    label: "Income Shock",
+    start: "#916447",
+    end: "#63432e",
+    panel: "rgba(255, 249, 236, 0.16)",
+    svg: `
+      <svg viewBox="0 0 240 160" aria-hidden="true">
+        <rect x="42" y="42" width="122" height="72" rx="14" fill="#fff9ec" />
+        <path d="M64 64 h48" stroke="#63432e" stroke-width="8" stroke-linecap="round" />
+        <path d="M64 88 h34" stroke="#63432e" stroke-width="8" stroke-linecap="round" />
+        <path d="M182 46 v48" stroke="#d7644a" stroke-width="10" stroke-linecap="round" />
+        <path d="M166 78 l16 18 l16 -18" fill="none" stroke="#d7644a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    `,
+  },
+};
+
+const MISSION_LIBRARY = [
+  {
+    id: "on-time",
+    title: "Pay on Time",
+    description: "Make every payment on time for 3 turns.",
+    isComplete: (player) => player.onTimeStreak >= 3,
+    rewardText: "$220 cash, 1 shield, and one cleared late-payment mark",
+    applyReward: (player) => {
+      player.cash += 220;
+      player.shields += 1;
+      clearDerogatoryMark(player, ["lateCardMarks", "lateLoanMarks", "transportDefaultMarks", "housingDefaultMarks"]);
+    },
+  },
+  {
+    id: "utilization",
+    title: "Keep Utilization Low",
+    description: "Stay under 30% utilization for 2 turns.",
+    isComplete: (player) => player.lowUtilizationStreak >= 2,
+    rewardText: "$80 cash, 1 knowledge, and $120 of debt relief",
+    applyReward: (player) => {
+      player.cash += 80;
+      player.knowledge += 1;
+      payHighestInterestDebt(player, 120);
+    },
+  },
+  {
+    id: "emergency-buffer",
+    title: "Build a Buffer",
+    description: "Reach a $500 emergency fund.",
+    isComplete: (player) => player.emergencyFund >= 500,
+    rewardText: "$120 cash and 1 shield",
+    applyReward: (player) => {
+      player.cash += 120;
+      player.shields += 1;
+    },
+  },
+  {
+    id: "loan-cleanup",
+    title: "Crush a Small Loan",
+    description: "Bring installment debt down to zero.",
+    isComplete: (player) => player.loanBalance <= 0,
+    rewardText: "$200 cash and one cleared loan-related mark",
+    applyReward: (player) => {
+      player.cash += 200;
+      clearBadLoanStatus(player);
+      clearDerogatoryMark(player, ["lateLoanMarks", "badLoanMarks"]);
+    },
+  },
+  {
+    id: "crisis-proof",
+    title: "Crisis Proof",
+    description: "Survive 1 crisis without missing a payment.",
+    isComplete: (player) => player.crisesSurvived >= 1,
+    rewardText: "$180 cash, 1 shield, and one cleared default mark",
+    applyReward: (player) => {
+      player.cash += 180;
+      player.shields += 1;
+      clearDerogatoryMark(player, ["housingDefaultMarks", "transportDefaultMarks", "lateLoanMarks", "lateCardMarks"]);
+    },
+  },
+  {
+    id: "steady-spending",
+    title: "Steady Spending",
+    description: "Avoid splurges for 2 turns.",
+    isComplete: (player) => player.stableSpendingStreak >= 2,
+    rewardText: "$240 cash and one cleared card mark",
+    applyReward: (player) => {
+      player.cash += 240;
+      clearDerogatoryMark(player, ["lateCardMarks", "unresolvedBillingMarks"]);
+    },
+  },
+  {
+    id: "billing-error",
+    title: "Dispute the Error",
+    description: "Resolve a billing error instead of eating the charge.",
+    isComplete: (player) => player.billingErrorsResolved >= 1,
+    rewardText: "$100 cash, 1 knowledge, and another cleared billing mark",
+    applyReward: (player) => {
+      player.cash += 100;
+      player.knowledge += 1;
+      resolveBillingIssue(player, 40);
+    },
+  },
+  {
+    id: "refinance",
+    title: "Refinance Rescue",
+    description: "Refinance a bad loan once you qualify.",
+    isComplete: (player) => player.refinanced,
+    rewardText: "$180 cash, 1 shield, and one cleared bad-loan mark",
+    applyReward: (player) => {
+      player.cash += 180;
+      player.shields += 1;
+      clearBadLoanStatus(player, 1);
+    },
+  },
+];
+
+const REFLECTION_SCORE = 550;
+const DOUBLE_ROLL_UNLOCK_SCORE = 775;
+const BACKGROUND_MUSIC_PATH = "./background-music.mp3";
+const MAX_CREDIT_GAIN_PER_TURN = 16;
+const MAX_CREDIT_DROP_PER_TURN = 36;
+
+const state = {
+  players: [],
+  currentPlayerIndex: 0,
+  round: 1,
+  lastDie: null,
+  lastRollNote: null,
+  phase: "setup",
+  log: [],
+  modal: null,
+  pendingNotices: [],
+  busy: false,
+  winnerId: null,
+  creditFlash: null,
+  recoveringError: false,
+};
+
+let uiAudioContext = null;
+
+const musicState = {
+  audio: null,
+  enabled: true,
+  available: null,
+  started: false,
+  starting: false,
+};
+
+const liveSession = {
+  socket: null,
+  roomCode: "",
+  memberId: null,
+  isHost: false,
+  hostMemberId: null,
+  members: [],
+  gameStarted: false,
+  localPlayerId: null,
+  statusText: "",
+  lastSnapshotKey: "",
+  pendingRemoteAction: false,
+  intentionalDisconnect: false,
+  suspendBroadcast: false,
+  connectPromise: null,
+};
+
+const elements = {
+  board: document.getElementById("board"),
+  eventSpotlight: document.getElementById("event-spotlight"),
+  eventFeed: document.getElementById("event-feed"),
+  heroStats: document.getElementById("hero-stats"),
+  setupForm: document.getElementById("setup-form"),
+  playerName: document.getElementById("player-name"),
+  humanCount: document.getElementById("human-count"),
+  extraHumanFields: document.getElementById("extra-human-fields"),
+  aiCount: document.getElementById("ai-count"),
+  roomCode: document.getElementById("room-code"),
+  createRoomButton: document.getElementById("create-room-button"),
+  joinRoomButton: document.getElementById("join-room-button"),
+  leaveRoomButton: document.getElementById("leave-room-button"),
+  liveConnectionPill: document.getElementById("live-connection-pill"),
+  liveStatus: document.getElementById("live-status"),
+  liveRoomMeta: document.getElementById("live-room-meta"),
+  liveRoomMembers: document.getElementById("live-room-members"),
+  musicButton: document.getElementById("music-button"),
+  musicNote: document.getElementById("music-note"),
+  newGameButton: document.getElementById("new-game-button"),
+  turnPanel: document.getElementById("turn-panel"),
+  goalPanel: document.getElementById("goal-panel"),
+  playersPanel: document.getElementById("players-panel"),
+  modalShell: document.getElementById("modal-shell"),
+  modalCard: document.getElementById("modal-card"),
+  creditFlash: document.getElementById("credit-flash"),
+};
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function clamp01(value) {
+  return clamp(value, 0, 1);
+}
+
+function formatMoney(value) {
+  return currencyFormatter.format(Math.round(value));
+}
+
+function formatSignedNumber(value) {
+  if (value > 0) {
+    return `+${value}`;
+  }
+  return String(value);
+}
+
+function truncateText(text, limit = 150) {
+  if (text.length <= limit) {
+    return text;
+  }
+  return `${text.slice(0, limit - 1).trim()}...`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function getRoomCodeFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  return (params.get("room") || "").trim().toUpperCase();
+}
+
+function updateRoomCodeInUrl(roomCode = "") {
+  const url = new URL(window.location.href);
+  if (roomCode) {
+    url.searchParams.set("room", roomCode);
+  } else {
+    url.searchParams.delete("room");
+  }
+  window.history.replaceState({}, "", url);
+}
+
+function getShareLink(roomCode) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("room", roomCode);
+  return url.toString();
+}
+
+function isInLiveRoom() {
+  return Boolean(liveSession.roomCode);
+}
+
+function isLiveMirrorClient() {
+  return isInLiveRoom() && !liveSession.isHost;
+}
+
+function getLiveHumanMembers() {
+  return liveSession.members.filter((member) => !member.isSpectator);
+}
+
+function getLocalMember() {
+  return liveSession.members.find((member) => member.memberId === liveSession.memberId) || null;
+}
+
+function updateLocalPlayerId() {
+  const localMember = getLocalMember();
+  liveSession.localPlayerId = localMember ? localMember.playerId || null : null;
+}
+
+function getPlayerById(playerId) {
+  return state.players.find((player) => player.id === playerId) || null;
+}
+
+function getPlayerNameById(playerId) {
+  const player = getPlayerById(playerId);
+  return player ? player.name : "the active player";
+}
+
+function canLocalClientControlPlayer(playerId) {
+  if (!isInLiveRoom() || !liveSession.gameStarted) {
+    return true;
+  }
+  if (liveSession.isHost) {
+    return true;
+  }
+  return Boolean(playerId && liveSession.localPlayerId === playerId);
+}
+
+function setLiveStatus(message) {
+  liveSession.statusText = message;
+  renderLiveRoomPanel();
+}
+
+function isRemoteActionPending() {
+  return isLiveMirrorClient() && liveSession.pendingRemoteAction;
+}
+
+function canLocalClientActOnCurrentTurn(player = getCurrentPlayer()) {
+  if (!player) {
+    return false;
+  }
+  return canLocalClientControlPlayer(player.id) && !isRemoteActionPending();
+}
+
+function canLocalClientActOnModal() {
+  if (!state.modal) {
+    return false;
+  }
+  return canLocalClientControlPlayer(state.modal.playerId) && !isRemoteActionPending();
+}
+
+function clearGameState() {
+  state.players = [];
+  state.currentPlayerIndex = 0;
+  state.round = 1;
+  state.lastDie = null;
+  state.lastRollNote = null;
+  state.phase = "setup";
+  state.log = [];
+  state.modal = null;
+  state.pendingNotices = [];
+  state.busy = false;
+  state.winnerId = null;
+  clearCreditFlash();
+}
+
+function serializeMissionForNetwork(mission) {
+  return {
+    id: mission.id,
+    title: mission.title,
+    description: mission.description || "",
+  };
+}
+
+function sanitizePlayerForNetwork(player) {
+  return {
+    ...player,
+    missions: (player.missions || []).map(serializeMissionForNetwork),
+  };
+}
+
+function sanitizeModalForNetwork(modal) {
+  if (!modal) {
+    return null;
+  }
+
+  if (modal.mode === "notice") {
+    return {
+      mode: "notice",
+      playerId: modal.playerId || null,
+      notice: {
+        title: modal.notice.title,
+        body: modal.notice.body,
+        buttonLabel: modal.notice.buttonLabel,
+        artId: modal.notice.artId,
+        artLabel: modal.notice.artLabel,
+      },
+    };
+  }
+
+  return {
+    mode: "decision",
+    playerId: modal.playerId || null,
+    pendingOption: Boolean(modal.pendingOption),
+    decision: {
+      title: modal.decision.title,
+      body: modal.decision.body,
+      artId: modal.decision.artId,
+      artLabel: modal.decision.artLabel,
+      options: modal.decision.options.map((option) => ({
+        label: option.label,
+        description: option.description,
+      })),
+    },
+  };
+}
+
+function buildNetworkSnapshot() {
+  return {
+    players: state.players.map(sanitizePlayerForNetwork),
+    currentPlayerIndex: state.currentPlayerIndex,
+    round: state.round,
+    lastDie: state.lastDie,
+    lastRollNote: state.lastRollNote,
+    phase: state.phase,
+    log: state.log,
+    modal: sanitizeModalForNetwork(state.modal),
+    busy: state.busy,
+    winnerId: state.winnerId,
+    creditFlash: state.creditFlash,
+  };
+}
+
+function applyNetworkSnapshot(snapshot) {
+  if (!snapshot) {
+    return;
+  }
+
+  state.players = snapshot.players || [];
+  state.currentPlayerIndex = snapshot.currentPlayerIndex || 0;
+  state.round = snapshot.round || 1;
+  state.lastDie = snapshot.lastDie ?? null;
+  state.lastRollNote = snapshot.lastRollNote ?? null;
+  state.phase = snapshot.phase || "setup";
+  state.log = snapshot.log || [];
+  state.modal = snapshot.modal || null;
+  state.pendingNotices = [];
+  state.busy = Boolean(snapshot.busy);
+  state.winnerId = snapshot.winnerId || null;
+  state.creditFlash = snapshot.creditFlash || null;
+  liveSession.pendingRemoteAction = false;
+  renderAll();
+}
+
+function sendLiveMessage(payload) {
+  if (!liveSession.socket || liveSession.socket.readyState !== window.WebSocket.OPEN) {
+    return false;
+  }
+
+  liveSession.socket.send(JSON.stringify(payload));
+  return true;
+}
+
+function broadcastLiveSnapshot(force = false) {
+  if (!isInLiveRoom() || !liveSession.isHost || !liveSession.gameStarted || liveSession.suspendBroadcast) {
+    return;
+  }
+
+  const snapshot = buildNetworkSnapshot();
+  const snapshotKey = JSON.stringify(snapshot);
+  if (!force && snapshotKey === liveSession.lastSnapshotKey) {
+    return;
+  }
+
+  liveSession.lastSnapshotKey = snapshotKey;
+  sendLiveMessage({
+    type: "host-snapshot",
+    snapshot,
+  });
+}
+
+function applyRoomState(room) {
+  if (!room) {
+    return;
+  }
+
+  liveSession.roomCode = room.code;
+  liveSession.hostMemberId = room.hostMemberId || null;
+  liveSession.members = room.members || [];
+  liveSession.gameStarted = Boolean(room.started);
+  updateLocalPlayerId();
+  renderLiveRoomPanel();
+}
+
+function syncSetupFormState() {
+  const inLiveRoom = isInLiveRoom();
+  const canHostConfigure = !inLiveRoom || liveSession.isHost;
+  const submitButton = elements.setupForm.querySelector('button[type="submit"]');
+  const humanLabel = document.querySelector(".human-count-label");
+  const aiLabel = document.querySelector(".ai-count-label");
+
+  elements.setupForm.classList.toggle("live-room-active", inLiveRoom);
+  if (humanLabel) {
+    humanLabel.hidden = inLiveRoom;
+  }
+  if (aiLabel) {
+    aiLabel.hidden = false;
+  }
+  elements.extraHumanFields.hidden = inLiveRoom;
+  elements.playerName.disabled = inLiveRoom;
+  elements.humanCount.disabled = inLiveRoom;
+  elements.aiCount.disabled = inLiveRoom && !liveSession.isHost;
+  elements.roomCode.disabled = inLiveRoom;
+  elements.createRoomButton.disabled = inLiveRoom;
+  elements.joinRoomButton.disabled = inLiveRoom;
+  elements.leaveRoomButton.disabled = !inLiveRoom;
+  elements.newGameButton.disabled = inLiveRoom && !liveSession.isHost;
+  if (submitButton) {
+    submitButton.disabled = inLiveRoom && !liveSession.isHost;
+    submitButton.textContent = inLiveRoom
+      ? liveSession.gameStarted
+        ? "Restart Live Game"
+        : "Start Live Game"
+      : "Deal the Board";
+  }
+  elements.newGameButton.textContent = inLiveRoom ? "Restart Room" : "Restart";
+  if (!canHostConfigure && !liveSession.gameStarted) {
+    elements.newGameButton.disabled = true;
+  }
+}
+
+function renderLiveRoomPanel() {
+  if (!elements.liveConnectionPill) {
+    return;
+  }
+
+  const inLiveRoom = isInLiveRoom();
+  const humanMembers = getLiveHumanMembers();
+  const pillText = !inLiveRoom
+    ? "Local Mode"
+    : liveSession.gameStarted
+      ? liveSession.isHost
+        ? "Host Live"
+        : "Live Game"
+      : liveSession.isHost
+        ? "Hosting Lobby"
+        : "Joined Lobby";
+  const defaultStatus = !inLiveRoom
+    ? "Create a live room or join one with a code. The host keeps the shared session running."
+    : liveSession.gameStarted
+      ? `Room ${liveSession.roomCode} is live. ${liveSession.isHost ? "You are the host." : "Wait for your turn or watch the board update live."}`
+      : liveSession.isHost
+        ? `Room ${liveSession.roomCode} is ready. Start when everyone has joined.`
+        : `Room ${liveSession.roomCode} is waiting for the host to start.`;
+
+  elements.liveConnectionPill.textContent = pillText;
+  elements.liveStatus.textContent = liveSession.statusText || defaultStatus;
+
+  if (!inLiveRoom) {
+    elements.liveRoomMeta.innerHTML = "";
+    elements.liveRoomMembers.innerHTML = '<p class="live-room-empty">No live room yet. Local hot-seat mode is still available below.</p>';
+    syncSetupFormState();
+    return;
+  }
+
+  const shareLink = getShareLink(liveSession.roomCode);
+  const spectatorCount = liveSession.members.filter((member) => member.isSpectator).length;
+  elements.liveRoomMeta.innerHTML = `
+    <p class="live-room-copy"><strong>Room code:</strong> ${escapeHtml(liveSession.roomCode)}</p>
+    <p class="live-room-copy"><strong>Invite link:</strong> <a href="${escapeHtml(shareLink)}">${escapeHtml(shareLink)}</a></p>
+    <p class="live-room-copy">${humanMembers.length} player${humanMembers.length === 1 ? "" : "s"} in the room${spectatorCount ? ` and ${spectatorCount} spectator${spectatorCount === 1 ? "" : "s"}` : ""}.</p>
+  `;
+
+  elements.liveRoomMembers.innerHTML = liveSession.members.length
+    ? `
+        <div class="live-room-roster">
+          ${liveSession.members
+            .map((member) => {
+              const badges = [];
+              if (member.memberId === liveSession.memberId) {
+                badges.push('<span class="live-room-badge">You</span>');
+              }
+              if (member.memberId === liveSession.hostMemberId) {
+                badges.push('<span class="live-room-badge">Host</span>');
+              }
+              if (member.isSpectator) {
+                badges.push('<span class="live-room-badge">Spectator</span>');
+              } else if (member.playerId) {
+                badges.push('<span class="live-room-badge">Seat Locked</span>');
+              }
+              if (!member.connected) {
+                badges.push('<span class="live-room-badge offline">Offline</span>');
+              }
+
+              return `
+                <div class="live-room-member">
+                  <span class="live-room-member-name">${escapeHtml(member.name)}</span>
+                  <div class="live-room-badges">
+                    ${badges.filter(Boolean).join("")}
+                  </div>
+                </div>
+              `;
+            })
+            .join("")}
+        </div>
+      `
+    : '<p class="live-room-empty">Waiting for players to connect.</p>';
+
+  syncSetupFormState();
+}
+
+function getLiveSocketUrl() {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}`;
+}
+
+function resetLiveSessionState(message = "") {
+  liveSession.roomCode = "";
+  liveSession.memberId = null;
+  liveSession.isHost = false;
+  liveSession.hostMemberId = null;
+  liveSession.members = [];
+  liveSession.gameStarted = false;
+  liveSession.localPlayerId = null;
+  liveSession.pendingRemoteAction = false;
+  liveSession.lastSnapshotKey = "";
+  liveSession.suspendBroadcast = false;
+  liveSession.connectPromise = null;
+  liveSession.statusText = message;
+  updateRoomCodeInUrl("");
+  if (elements.roomCode) {
+    elements.roomCode.value = "";
+  }
+  renderLiveRoomPanel();
+}
+
+function returnToLocalMode(message = "") {
+  resetLiveSessionState(message);
+  clearGameState();
+  renderAll();
+  renderExtraHumanFields();
+  startGame(getHumanNamesFromForm(), getConfiguredAiCount());
+}
+
+function closeLiveSocket() {
+  if (!liveSession.socket) {
+    return;
+  }
+
+  liveSession.intentionalDisconnect = true;
+  liveSession.socket.close();
+  liveSession.socket = null;
+  liveSession.connectPromise = null;
+}
+
+function handleRoomJoined(room, memberId, isHost) {
+  liveSession.memberId = memberId;
+  liveSession.isHost = isHost;
+  liveSession.pendingRemoteAction = false;
+  liveSession.lastSnapshotKey = "";
+  applyRoomState(room);
+  updateRoomCodeInUrl(room.code);
+  elements.roomCode.value = room.code;
+  clearGameState();
+  renderAll();
+
+  if (room.started) {
+    const localMember = getLocalMember();
+    setLiveStatus(
+      localMember && localMember.isSpectator
+        ? `Joined room ${room.code} as a spectator.`
+        : `Joined room ${room.code}. The board will sync in a moment.`
+    );
+    return;
+  }
+
+  setLiveStatus(
+    isHost
+      ? `Room ${room.code} is ready. Share the invite link and start when everyone is here.`
+      : `Joined room ${room.code}. Wait for the host to start the game.`
+  );
+}
+
+function getPlayerIdForMember(memberId) {
+  const member = liveSession.members.find((candidate) => candidate.memberId === memberId);
+  return member ? member.playerId || null : null;
+}
+
+function handleRemotePlayerAction(memberId, action) {
+  if (!liveSession.isHost || !action) {
+    return;
+  }
+
+  const actingPlayerId = getPlayerIdForMember(memberId);
+  const currentPlayer = getCurrentPlayer();
+
+  switch (action.type) {
+    case "roll":
+      if (currentPlayer && currentPlayer.id === actingPlayerId && !state.busy && state.phase === "ready") {
+        void runTurn(currentPlayer);
+      }
+      break;
+    case "end-reflection":
+      if (currentPlayer && currentPlayer.id === actingPlayerId && !state.busy && state.phase === "reflection") {
+        advanceTurn();
+      }
+      break;
+    case "hint":
+      if (currentPlayer && currentPlayer.id === actingPlayerId && !state.busy) {
+        performHintAction();
+      }
+      break;
+    case "dismiss-notice":
+      if (state.modal && state.modal.mode === "notice" && state.modal.playerId === actingPlayerId) {
+        dismissCurrentNotice();
+      }
+      break;
+    case "decision-choice":
+      if (state.modal && state.modal.mode === "decision" && state.modal.playerId === actingPlayerId && !state.creditFlash) {
+        selectDecisionOptionByIndex(Number(action.optionIndex));
+      }
+      break;
+    case "decision-flash-dismiss":
+      if (state.modal && state.modal.mode === "decision" && state.modal.playerId === actingPlayerId && state.creditFlash) {
+        completeModalDecisionAfterFlash();
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+function handleLiveServerMessage(message) {
+  switch (message.type) {
+    case "room-joined":
+      handleRoomJoined(message.room, message.memberId, message.isHost);
+      break;
+    case "room-state":
+      applyRoomState(message.room);
+      if (!message.room.started && !state.players.length) {
+        renderAll();
+      }
+      break;
+    case "room-closed":
+      closeLiveSocket();
+      returnToLocalMode(message.reason || "The live room closed.");
+      break;
+    case "state-snapshot":
+      if (!liveSession.isHost) {
+        applyNetworkSnapshot(message.snapshot);
+      }
+      break;
+    case "player-action":
+      handleRemotePlayerAction(message.memberId, message.action);
+      break;
+    case "server-error":
+      setLiveStatus(message.message || "The server rejected that request.");
+      break;
+    default:
+      break;
+  }
+}
+
+async function connectLiveSocket() {
+  if (window.location.protocol === "file:") {
+    throw new Error("Live rooms need the Node server. Open the game through npm start instead of a file path.");
+  }
+
+  if (liveSession.socket && liveSession.socket.readyState === window.WebSocket.OPEN) {
+    return liveSession.socket;
+  }
+
+  if (liveSession.connectPromise) {
+    await liveSession.connectPromise;
+    return liveSession.socket;
+  }
+
+  liveSession.intentionalDisconnect = false;
+
+  const socket = new window.WebSocket(getLiveSocketUrl());
+  liveSession.socket = socket;
+
+  liveSession.connectPromise = new Promise((resolve, reject) => {
+    const handleOpen = () => {
+      socket.removeEventListener("error", handleError);
+      resolve();
+    };
+    const handleError = () => {
+      socket.removeEventListener("open", handleOpen);
+      reject(new Error("Could not connect to the live room server."));
+    };
+    socket.addEventListener("open", handleOpen, { once: true });
+    socket.addEventListener("error", handleError, { once: true });
+  });
+  await liveSession.connectPromise;
+  liveSession.connectPromise = null;
+
+  socket.addEventListener("message", (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      handleLiveServerMessage(message);
+    } catch (error) {
+      console.error("Credit Climb could not parse a live-room message:", error);
+    }
+  });
+
+  socket.addEventListener("close", () => {
+    const wasIntentional = liveSession.intentionalDisconnect;
+    liveSession.socket = null;
+    liveSession.intentionalDisconnect = false;
+     liveSession.connectPromise = null;
+    if (!wasIntentional && isInLiveRoom()) {
+      returnToLocalMode("Connection lost. Rejoin the room to keep playing live.");
+    }
+  });
+
+  return socket;
+}
+
+async function createLiveRoom() {
+  const name = elements.playerName.value.trim() || "You";
+
+  try {
+    setLiveStatus("Connecting to the live room server...");
+    clearGameState();
+    renderAll();
+    await connectLiveSocket();
+    sendLiveMessage({
+      type: "create-room",
+      name,
+    });
+  } catch (error) {
+    returnToLocalMode(error.message);
+  }
+}
+
+async function joinLiveRoom() {
+  const roomCode = (elements.roomCode.value || getRoomCodeFromQuery()).trim().toUpperCase();
+  const name = elements.playerName.value.trim() || "You";
+
+  if (!roomCode) {
+    setLiveStatus("Enter a room code first.");
+    return;
+  }
+
+  try {
+    setLiveStatus(`Joining room ${roomCode}...`);
+    clearGameState();
+    renderAll();
+    await connectLiveSocket();
+    sendLiveMessage({
+      type: "join-room",
+      roomCode,
+      name,
+    });
+  } catch (error) {
+    returnToLocalMode(error.message);
+  }
+}
+
+function leaveLiveRoom() {
+  if (isInLiveRoom()) {
+    sendLiveMessage({ type: "leave-room" });
+  }
+  closeLiveSocket();
+  returnToLocalMode("Returned to local mode.");
+}
+
+function sendLivePlayerAction(action) {
+  if (!isLiveMirrorClient() || !sendLiveMessage({ type: "player-action", action })) {
+    return false;
+  }
+
+  liveSession.pendingRemoteAction = true;
+  renderAll();
+  return true;
+}
+
+function startLiveRoomGame() {
+  if (!isInLiveRoom() || !liveSession.isHost) {
+    return;
+  }
+
+  const humanNames = getLiveHumanMembers().map((member) => member.name);
+  if (!humanNames.length) {
+    setLiveStatus("At least one player needs to be in the room before you can start.");
+    return;
+  }
+
+  liveSession.suspendBroadcast = true;
+  startGame(humanNames, getConfiguredAiCount());
+
+  const humanPlayers = state.players.filter((player) => !player.isAI);
+  const assignments = getLiveHumanMembers().map((member, index) => ({
+    memberId: member.memberId,
+    playerId: humanPlayers[index] ? humanPlayers[index].id : null,
+  }));
+
+  liveSession.members = liveSession.members.map((member) => {
+    const assignment = assignments.find((candidate) => candidate.memberId === member.memberId);
+    return {
+      ...member,
+      playerId: assignment ? assignment.playerId : member.playerId || null,
+    };
+  });
+  liveSession.gameStarted = true;
+  updateLocalPlayerId();
+  sendLiveMessage({
+    type: "start-game",
+    assignments,
+  });
+  liveSession.suspendBroadcast = false;
+  renderAll();
+  broadcastLiveSnapshot(true);
+  setLiveStatus(`Room ${liveSession.roomCode} is live. Share the link and play from your own browsers.`);
+}
+
+function getUtilizationBandScore(utilization) {
+  if (utilization <= 0.1) {
+    return 1;
+  }
+  if (utilization <= 0.3) {
+    return 0.92;
+  }
+  if (utilization <= 0.5) {
+    return 0.78;
+  }
+  if (utilization <= 0.75) {
+    return 0.56;
+  }
+  if (utilization <= 1) {
+    return 0.3;
+  }
+  return 0.12;
+}
+
+function getEssentialBills(player) {
+  const bills = [];
+  if (player.housing) {
+    bills.push({
+      label: `${player.housing.name} rent`,
+      amount: player.housing.recurringCost,
+      type: "housing",
+    });
+  }
+  if (player.transport) {
+    bills.push({
+      label: `${player.transport.name} transport`,
+      amount: player.transport.recurringCost,
+      type: "transport",
+    });
+  }
+  if (player.loanBalance > 0) {
+    bills.push({
+      label: "Loan payment",
+      amount: getLoanPayment(player),
+      type: "loan",
+    });
+  }
+  return bills;
+}
+
+function getMusicButtonLabel() {
+  if (musicState.available === false) {
+    return "Music Missing";
+  }
+  if (musicState.started) {
+    return "Music On";
+  }
+  if (!musicState.enabled) {
+    return "Music Off";
+  }
+  return "Start Music";
+}
+
+function getMusicStatusText() {
+  if (musicState.available === false) {
+    return 'Add a file named "background-music.mp3" to this folder to enable looping music.';
+  }
+  if (musicState.started) {
+    return "Background music is looping. Click the button to mute it.";
+  }
+  if (!musicState.enabled) {
+    return "Background music is muted. Click the button to turn it back on.";
+  }
+  return "Music will begin after your next click in the game.";
+}
+
+function refreshMusicControls() {
+  const musicButton = elements.musicButton;
+  if (musicButton) {
+    musicButton.textContent = getMusicButtonLabel();
+    musicButton.disabled = musicState.available === false;
+    musicButton.setAttribute("aria-pressed", musicState.started ? "true" : "false");
+  }
+
+  const musicNote = elements.musicNote;
+  if (musicNote) {
+    musicNote.textContent = getMusicStatusText();
+  }
+}
+
+function ensureBackgroundMusic() {
+  if (musicState.audio) {
+    return musicState.audio;
+  }
+
+  const audio = new Audio(BACKGROUND_MUSIC_PATH);
+  audio.loop = true;
+  audio.preload = "auto";
+  audio.volume = 0.34;
+
+  audio.addEventListener("loadeddata", () => {
+    musicState.available = true;
+    refreshMusicControls();
+  });
+
+  audio.addEventListener("play", () => {
+    musicState.available = true;
+    musicState.started = true;
+    refreshMusicControls();
+  });
+
+  audio.addEventListener("pause", () => {
+    musicState.started = false;
+    refreshMusicControls();
+  });
+
+  audio.addEventListener("error", () => {
+    musicState.available = false;
+    musicState.started = false;
+    refreshMusicControls();
+  });
+
+  audio.load();
+  musicState.audio = audio;
+  return audio;
+}
+
+async function startBackgroundMusic() {
+  if (!musicState.enabled || musicState.available === false || musicState.starting) {
+    return;
+  }
+
+  musicState.starting = true;
+  const audio = ensureBackgroundMusic();
+
+  try {
+    const playAttempt = audio.play();
+    if (playAttempt && typeof playAttempt.then === "function") {
+      await playAttempt;
+    }
+    musicState.available = true;
+    musicState.started = true;
+  } catch (error) {
+    if (error && (error.name === "NotAllowedError" || error.name === "AbortError")) {
+      musicState.started = false;
+    } else {
+      musicState.available = false;
+      musicState.started = false;
+    }
+  } finally {
+    musicState.starting = false;
+    refreshMusicControls();
+  }
+}
+
+function pauseBackgroundMusic() {
+  if (musicState.audio) {
+    musicState.audio.pause();
+  }
+  musicState.started = false;
+  refreshMusicControls();
+}
+
+function handleMusicToggle() {
+  if (musicState.available === false) {
+    return;
+  }
+
+  if (musicState.started) {
+    musicState.enabled = false;
+    pauseBackgroundMusic();
+    return;
+  }
+
+  musicState.enabled = true;
+  void startBackgroundMusic();
+}
+
+function primeBackgroundMusic() {
+  if (!musicState.enabled || musicState.started || musicState.available === false) {
+    return;
+  }
+  void startBackgroundMusic();
+}
+
+function getUiAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    return null;
+  }
+
+  if (!uiAudioContext) {
+    uiAudioContext = new AudioContextClass();
+  }
+
+  if (uiAudioContext.state === "suspended") {
+    void uiAudioContext.resume().catch(() => {});
+  }
+
+  return uiAudioContext;
+}
+
+function playUiTone(context, frequency, start, duration, type, peakGain) {
+  const oscillator = context.createOscillator();
+  const gainNode = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+
+  gainNode.gain.setValueAtTime(0.0001, start);
+  gainNode.gain.exponentialRampToValueAtTime(peakGain, start + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.05);
+}
+
+function playCreditFlashSound(direction) {
+  const context = getUiAudioContext();
+  if (!context) {
+    return;
+  }
+
+  const start = context.currentTime + 0.01;
+  if (direction === "up") {
+    playUiTone(context, 720, start, 0.08, "triangle", 0.035);
+    playUiTone(context, 980, start + 0.08, 0.14, "sine", 0.045);
+    return;
+  }
+
+  if (direction === "steady") {
+    playUiTone(context, 560, start, 0.1, "triangle", 0.02);
+    return;
+  }
+
+  playUiTone(context, 390, start, 0.08, "triangle", 0.03);
+  playUiTone(context, 280, start + 0.07, 0.14, "sawtooth", 0.028);
+}
+
+function getDecisionArt(decision) {
+  const art = DECISION_ART_LIBRARY[decision.artId] || DECISION_ART_LIBRARY.generic;
+  return {
+    ...art,
+    label: decision.artLabel || art.label,
+  };
+}
+
+function queuePlayerNotice(player, notice) {
+  if (!player || player.isAI) {
+    return;
+  }
+
+  state.pendingNotices.push({
+    playerId: player.id,
+    buttonLabel: "Continue",
+    ...notice,
+  });
+}
+
+function showNotice(player, notice) {
+  if (!player || player.isAI) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    state.modal = {
+      mode: "notice",
+      playerId: player.id,
+      notice: {
+        buttonLabel: "Continue",
+        ...notice,
+      },
+      resolve,
+    };
+    renderAll();
+  });
+}
+
+async function flushPlayerNotices(player) {
+  if (!player || !state.pendingNotices.length) {
+    return;
+  }
+
+  const notices = state.pendingNotices.filter((notice) => notice.playerId === player.id);
+  state.pendingNotices = state.pendingNotices.filter((notice) => notice.playerId !== player.id);
+
+  for (const notice of notices) {
+    await showNotice(player, notice);
+  }
+}
+
+function shuffle(list) {
+  const clone = [...list];
+  for (let index = clone.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [clone[index], clone[swapIndex]] = [clone[swapIndex], clone[index]];
+  }
+  return clone;
+}
+
+function randomFrom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function stepPlayerBack(player, steps = 1) {
+  player.position = (player.position - steps + BOARD_SPACES.length) % BOARD_SPACES.length;
+}
+
+function getRollOutcome(player) {
+  const firstRoll = Math.floor(Math.random() * 6) + 1;
+  if (!player.doubleRollUnlocked) {
+    return {
+      value: firstRoll,
+      note: null,
+      message: `${player.name} rolled a ${firstRoll}.`,
+    };
+  }
+
+  const secondRoll = Math.floor(Math.random() * 6) + 1;
+  const chosenRoll = Math.max(firstRoll, secondRoll);
+  return {
+    value: chosenRoll,
+    note: `Double roll: ${firstRoll} and ${secondRoll}, taking ${chosenRoll}`,
+    message: `${player.name} rolled ${firstRoll} and ${secondRoll}, keeping ${chosenRoll} thanks to premium credit.`,
+  };
+}
+
+function getCurrentPlayer() {
+  return state.players[state.currentPlayerIndex];
+}
+
+function getTotalDebt(player) {
+  return Math.round(player.cardBalance + player.loanBalance);
+}
+
+function getSavings(player) {
+  return Math.round(player.cash + player.emergencyFund);
+}
+
+function getUtilization(player) {
+  if (player.creditLimit <= 0) {
+    return 0;
+  }
+  return player.cardBalance / player.creditLimit;
+}
+
+function getLifeStage(player) {
+  if (player.age <= 20) {
+    return "Launch";
+  }
+  if (player.age <= 23) {
+    return "Foundation";
+  }
+  if (player.age <= 27) {
+    return "Growth";
+  }
+  return "Freedom Run";
+}
+
+function getScoreBand(player) {
+  const score = player.creditScore;
+  if (score < 580) {
+    return { label: "Locked Out", color: "#c85a40" };
+  }
+  if (score < 670) {
+    return { label: "Building", color: "#d7a73d" };
+  }
+  if (score < 740) {
+    return { label: "Steady", color: "#5f8f3d" };
+  }
+  if (score < 800) {
+    return { label: "Strong", color: "#1f6ba5" };
+  }
+  return { label: "Premium", color: "#2d7d7d" };
+}
+
+function createTurnFlags() {
+  return {
+    missedPayment: false,
+    splurged: false,
+    paidFull: false,
+    paidMinimum: false,
+    facedCrisis: false,
+    crisisHandled: false,
+  };
+}
+
+function logEvent(title, body) {
+  state.log.unshift({ title, body });
+  state.log = state.log.slice(0, 40);
+}
+
+function makePlayer(name, color, background, career, isAI) {
+  const historySeed = CREDIT_HISTORY_SEEDS[background.id] || {};
+  return {
+    id: `${name.toLowerCase().replace(/\s+/g, "-")}-${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    color,
+    isAI,
+    position: 0,
+    laps: 0,
+    age: 18,
+    background,
+    career,
+    cash: background.cash,
+    emergencyFund: background.emergencyFund,
+    creditScore: background.creditScore,
+    creditLimit: historySeed.creditLimit || 320,
+    cardBalance: background.cardBalance,
+    loanBalance: background.loanBalance,
+    housing: null,
+    housingRisk: 0,
+    transport: null,
+    transportRisk: 0,
+    transportTrap: false,
+    growthAsset: null,
+    autopayMode: "full",
+    shields: background.shields,
+    knowledge: background.knowledge,
+    missions: [],
+    completedMissionIds: [],
+    onTimeStreak: 0,
+    cleanTurnStreak: historySeed.cleanTurnStreak || 0,
+    missedPaymentCount: historySeed.missedPaymentCount || 0,
+    recentMissedPayment: false,
+    lateCardMarks: historySeed.lateCardMarks || 0,
+    lateLoanMarks: historySeed.lateLoanMarks || 0,
+    housingDefaultMarks: historySeed.housingDefaultMarks || 0,
+    transportDefaultMarks: historySeed.transportDefaultMarks || 0,
+    badLoanMarks: historySeed.badLoanMarks || 0,
+    unresolvedBillingMarks: historySeed.unresolvedBillingMarks || 0,
+    lowUtilizationStreak: 0,
+    stableSpendingStreak: 0,
+    crisesSurvived: 0,
+    billingErrorsResolved: 0,
+    unresolvedBillingError: Boolean(historySeed.unresolvedBillingMarks),
+    securedCardUsed: false,
+    badLoan: false,
+    refinanced: false,
+    limitUpgradeOne: false,
+    limitUpgradeTwo: false,
+    limitUpgradeThree: false,
+    doubleRollUnlocked: false,
+    reflectionModeActive: false,
+    skipNextActionTurn: false,
+    totalTurnsTaken: 0,
+    lastUpkeepCreditDelta: null,
+    lastUpkeepCreditLabel: "0",
+    lastUpkeepCreditFeedback: null,
+    creditRawTargetScore: background.creditScore,
+    creditHistoryCeiling: 850,
+    creditTargetScore: background.creditScore,
+    turnFlags: createTurnFlags(),
+  };
+}
+
+function startGame(humanNames, aiCount) {
+  const shuffledBackgrounds = shuffle(BACKGROUNDS);
+  const shuffledCareers = shuffle(CAREERS);
+  const players = [];
+
+  humanNames.forEach((name, index) => {
+    players.push(
+      makePlayer(
+        name || `Player ${index + 1}`,
+        PLAYER_COLORS[index],
+        shuffledBackgrounds[index],
+        shuffledCareers[index],
+        false
+      )
+    );
+  });
+
+  for (let index = 0; index < aiCount; index += 1) {
+    const playerIndex = humanNames.length + index;
+    players.push(
+      makePlayer(
+        AI_NAMES[index],
+        PLAYER_COLORS[playerIndex],
+        shuffledBackgrounds[playerIndex],
+        shuffledCareers[playerIndex],
+        true
+      )
+    );
+  }
+
+  state.players = players;
+  state.currentPlayerIndex = 0;
+  state.round = 1;
+  state.lastDie = null;
+  state.lastRollNote = null;
+  state.phase = "setup";
+  state.log = [];
+  state.modal = null;
+  state.pendingNotices = [];
+  state.busy = false;
+  state.winnerId = null;
+  clearCreditFlash();
+
+  players.forEach((player) => {
+    logEvent(
+      player.name,
+      `${player.name} starts with ${formatMoney(player.cash)} cash, a ${player.creditScore} score, the "${player.background.name}" background, and a ${player.career.name} income path.`
+    );
+  });
+
+  renderAll();
+  void beginTurn();
+}
+
+function recordMissedPayment(player, markField) {
+  player.turnFlags.missedPayment = true;
+  player.missedPaymentCount += 1;
+  player.recentMissedPayment = true;
+  player.onTimeStreak = 0;
+  player.cleanTurnStreak = 0;
+  if (markField) {
+    player[markField] += 1;
+  }
+}
+
+function addBadLoanMark(player, count = 1) {
+  player.badLoan = true;
+  player.badLoanMarks += count;
+}
+
+function clearBadLoanStatus(player, markRelief = 0) {
+  player.badLoan = false;
+  if (markRelief > 0) {
+    player.badLoanMarks = Math.max(0, player.badLoanMarks - markRelief);
+  }
+}
+
+function addUnresolvedBillingMark(player, count = 1) {
+  player.unresolvedBillingError = true;
+  player.unresolvedBillingMarks += count;
+}
+
+function resolveBillingIssue(player, balanceRelief = 0) {
+  let resolved = false;
+  if (player.unresolvedBillingMarks > 0) {
+    player.unresolvedBillingMarks = Math.max(0, player.unresolvedBillingMarks - 1);
+    resolved = true;
+  } else if (player.unresolvedBillingError) {
+    resolved = true;
+  }
+  if (!resolved) {
+    return false;
+  }
+
+  player.unresolvedBillingError = player.unresolvedBillingMarks > 0;
+  player.billingErrorsResolved += 1;
+  if (balanceRelief > 0) {
+    player.cardBalance = Math.max(0, player.cardBalance - balanceRelief);
+  }
+  return true;
+}
+
+function clearDerogatoryMark(player, fields) {
+  for (const field of fields) {
+    if (player[field] <= 0) {
+      continue;
+    }
+    player[field] = Math.max(0, player[field] - 1);
+    if (field === "unresolvedBillingMarks") {
+      player.unresolvedBillingError = player.unresolvedBillingMarks > 0;
+    }
+    return field;
+  }
+  return null;
+}
+
+function getDerogatoryMarkWeight(player) {
+  return (
+    player.lateCardMarks * 1.1 +
+    player.lateLoanMarks * 1 +
+    player.housingDefaultMarks * 1.45 +
+    player.transportDefaultMarks * 0.75 +
+    player.badLoanMarks * 1 +
+    player.unresolvedBillingMarks * 0.55
+  );
+}
+
+function getCreditMixBonus(player) {
+  const hasRevolving = player.creditLimit > 0;
+  const hasInstallment = player.loanBalance > 0 || player.refinanced || player.badLoanMarks > 0;
+  const lowUtilization = getUtilization(player) <= 0.3;
+
+  if (hasRevolving && hasInstallment && lowUtilization && !player.recentMissedPayment) {
+    return 8;
+  }
+  if ((hasRevolving || hasInstallment) && lowUtilization && player.cleanTurnStreak >= 3) {
+    return 4;
+  }
+  return 0;
+}
+
+function getCreditHistoryCeiling(player) {
+  const markPressure = getDerogatoryMarkWeight(player);
+  const cleanBonus = Math.min(16, player.cleanTurnStreak * 1.35);
+  const onTimeBonus = Math.min(12, player.onTimeStreak * 0.95);
+  const mixBonus = getCreditMixBonus(player);
+  const baseCeiling =
+    620 +
+    player.totalTurnsTaken * 1.95 +
+    cleanBonus +
+    onTimeBonus -
+    Math.min(42, markPressure * 3.2) +
+    mixBonus;
+
+  return clamp(Math.round(baseCeiling), 620, 850);
+}
+
+function calculateCreditProfile(player) {
+  const utilization = getUtilization(player);
+  const cleanTurnBonus = Math.min(0.2, player.cleanTurnStreak * 0.04);
+  const fullPaymentBonus = player.turnFlags.paidFull ? 0.02 : 0;
+  const minimumOnlyPenalty = player.turnFlags.paidMinimum && !player.turnFlags.paidFull ? 0.03 : 0;
+  const derogatoryWeight = getDerogatoryMarkWeight(player);
+  const paymentScore = clamp01(
+    1
+      - Math.min(0.48, player.missedPaymentCount * 0.12)
+      - (player.recentMissedPayment ? 0.06 : 0)
+      - minimumOnlyPenalty
+      + cleanTurnBonus
+      + fullPaymentBonus
+  );
+  const utilizationScore = getUtilizationBandScore(utilization);
+  const derogatoryScore = clamp01(
+    1
+      - derogatoryWeight * 0.07
+      + Math.min(0.12, player.cleanTurnStreak * 0.02)
+  );
+  let debtScore = clamp01(1 - player.loanBalance / 5500);
+  if (player.badLoan) {
+    debtScore = clamp01(debtScore - 0.1);
+  }
+  const ageScore = clamp01(Math.min(1, 0.55 + player.totalTurnsTaken * 0.035));
+  const profile =
+    paymentScore * 0.45 +
+    utilizationScore * 0.3 +
+    derogatoryScore * 0.15 +
+    debtScore * 0.05 +
+    ageScore * 0.05;
+
+  return {
+    paymentScore,
+    utilizationScore,
+    derogatoryScore,
+    debtScore,
+    ageScore,
+    profile: clamp01(profile),
+  };
+}
+
+function getCreditPreview(player) {
+  const components = calculateCreditProfile(player);
+  const rawTargetScore = clamp(Math.round(300 + components.profile * 550), 300, 850);
+  const historyCeiling = getCreditHistoryCeiling(player);
+  return {
+    ...components,
+    rawTargetScore,
+    historyCeiling,
+    targetScore: Math.min(rawTargetScore, historyCeiling),
+  };
+}
+
+function recalculateCreditScore(player) {
+  const madeMinimumOnlyPayment = player.turnFlags.paidMinimum && !player.turnFlags.paidFull;
+  if (player.recentMissedPayment) {
+    player.cleanTurnStreak = 0;
+    player.onTimeStreak = 0;
+  } else {
+    if (!madeMinimumOnlyPayment) {
+      player.cleanTurnStreak += 1;
+    }
+    player.onTimeStreak += 1;
+  }
+
+  const { profile, rawTargetScore, historyCeiling, targetScore } = getCreditPreview(player);
+  const delta = targetScore - player.creditScore;
+  const boundedDelta = delta > 0 ? Math.min(delta, MAX_CREDIT_GAIN_PER_TURN) : Math.max(delta, -MAX_CREDIT_DROP_PER_TURN);
+  player.creditScore = clamp(player.creditScore + boundedDelta, 300, 850);
+  player.creditProfile = profile;
+  player.creditRawTargetScore = rawTargetScore;
+  player.creditHistoryCeiling = historyCeiling;
+  player.creditTargetScore = targetScore;
+  player.recentMissedPayment = false;
+  return player.creditScore;
+}
+
+function getCreditImpactMessage(key, direction) {
+  const messages = {
+    paymentScore: {
+      up: "Cleaner payment history should help next turn.",
+      down: "Payment history damage should drag next turn.",
+    },
+    utilizationScore: {
+      up: "Lower utilization should help next turn.",
+      down: "Higher utilization should drag next turn.",
+    },
+    derogatoryScore: {
+      up: "Cleaning up a bad mark should help next turn.",
+      down: "A new bad mark should drag next turn.",
+    },
+    debtScore: {
+      up: "Lower loan pressure should help next turn.",
+      down: "More loan pressure should drag next turn.",
+    },
+    ageScore: {
+      up: "Stability helps your score over time.",
+      down: "This slows credit growth.",
+    },
+    default: {
+      up: "This choice should help your score next turn.",
+      down: "This choice should hurt your score next turn.",
+    },
+  };
+
+  const copy = messages[key] || messages.default;
+  return copy[direction];
+}
+
+function buildCreditFlashFeedback(beforeForecast, afterForecast) {
+  const forecastedDelta = afterForecast.delta;
+  const direction = forecastedDelta > 0 ? "up" : forecastedDelta < 0 ? "down" : "steady";
+  const factorDiffs = [
+    { key: "paymentScore", delta: afterForecast.preview.paymentScore - beforeForecast.preview.paymentScore },
+    { key: "utilizationScore", delta: afterForecast.preview.utilizationScore - beforeForecast.preview.utilizationScore },
+    { key: "derogatoryScore", delta: afterForecast.preview.derogatoryScore - beforeForecast.preview.derogatoryScore },
+    { key: "debtScore", delta: afterForecast.preview.debtScore - beforeForecast.preview.debtScore },
+    { key: "ageScore", delta: afterForecast.preview.ageScore - beforeForecast.preview.ageScore },
+  ];
+  const alignedDiffs = factorDiffs
+    .filter((diff) => {
+      if (direction === "up") {
+        return diff.delta >= 0;
+      }
+      if (direction === "down") {
+        return diff.delta <= 0;
+      }
+      return Math.abs(diff.delta) > 0;
+    })
+    .sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta));
+  const biggestShift = alignedDiffs[0];
+
+  let title = "Next Credit Check";
+  if (forecastedDelta >= 8) {
+    title = "Credit Up Next Turn";
+  } else if (forecastedDelta <= -8) {
+    title = "Credit Down Next Turn";
+  } else if (forecastedDelta === 0) {
+    title = "No Credit Change Next Turn";
+  }
+
+  let body = "Projected after income, bills, and autopay.";
+  if (direction !== "steady") {
+    body = getCreditImpactMessage(biggestShift ? biggestShift.key : "default", direction);
+  }
+  if (Math.abs(forecastedDelta) <= 3) {
+    if (direction === "up") {
+      body = "Small lift projected at next turn start.";
+    } else if (direction === "down") {
+      body = "Small hit projected at next turn start.";
+    } else {
+      body = "No score move projected at next turn start.";
+    }
+  }
+  if (
+    forecastedDelta === 0 &&
+    afterForecast.preview.rawTargetScore > afterForecast.preview.historyCeiling
+  ) {
+    body = "Good habits help, but your credit file is still too thin for a score jump yet.";
+  }
+
+  return {
+    direction,
+    title,
+    body,
+    points: forecastedDelta,
+    pointsLabel: formatSignedNumber(forecastedDelta),
+  };
+}
+
+function buildUpkeepCreditFeedback(player) {
+  const delta = player.lastUpkeepCreditDelta ?? 0;
+  const direction = delta > 0 ? "up" : delta < 0 ? "down" : "steady";
+  let body = "This turn's credit check ran after income, bills, and autopay.";
+
+  if (delta > 0) {
+    body = "Your latest payment and balance behavior lifted your score this turn.";
+  } else if (delta < 0) {
+    body = "Balance pressure or negative marks pulled your score down this turn.";
+  } else if (player.creditRawTargetScore > player.creditHistoryCeiling) {
+    body = "Good habits are helping, but your credit file is still too thin for a bigger jump.";
+  } else {
+    body = "No score move this turn after income, bills, and autopay.";
+  }
+
+  return {
+    direction,
+    title: "Start-of-Turn Credit Check",
+    body,
+    points: delta,
+    pointsLabel: formatSignedNumber(delta),
+  };
+}
+
+function clearCreditFlash() {
+  state.creditFlash = null;
+}
+
+function showCreditFlash(feedback) {
+  if (!feedback || !elements.creditFlash) {
+    return;
+  }
+
+  clearCreditFlash();
+  state.creditFlash = feedback;
+  playCreditFlashSound(feedback.direction);
+  renderAll();
+}
+
+function addCardBalance(player, amount) {
+  player.cardBalance = Math.max(0, Math.round(player.cardBalance + amount));
+}
+
+function clonePlayerState(player) {
+  // Player state can contain mission objects with function properties, so
+  // `structuredClone` will throw once the game has been running for a while.
+  // A JSON clone keeps the numeric/profile fields we need for forecasting.
+  return JSON.parse(JSON.stringify(player));
+}
+
+function addLoanBalance(player, amount) {
+  player.loanBalance = Math.max(0, Math.round(player.loanBalance + amount));
+}
+
+function takeCash(player, amount) {
+  const used = Math.min(player.cash, Math.max(0, amount));
+  player.cash -= used;
+  return used;
+}
+
+function takeEmergency(player, amount) {
+  const used = Math.min(player.emergencyFund, Math.max(0, amount));
+  player.emergencyFund -= used;
+  return used;
+}
+
+function spendCashThenCard(player, amount) {
+  const cashUsed = takeCash(player, amount);
+  const shortfall = Math.max(0, amount - cashUsed);
+  if (shortfall > 0) {
+    addCardBalance(player, shortfall);
+  }
+  return { cashUsed, shortfall };
+}
+
+function depositToEmergencyFund(player, amount) {
+  const moved = Math.min(player.cash, Math.max(0, amount));
+  player.cash -= moved;
+  player.emergencyFund += moved;
+  return moved;
+}
+
+function payHighestInterestDebt(player, amount) {
+  let remaining = Math.max(0, amount);
+  const towardCard = Math.min(player.cardBalance, remaining);
+  player.cardBalance -= towardCard;
+  remaining -= towardCard;
+  const towardLoan = Math.min(player.loanBalance, remaining);
+  player.loanBalance -= towardLoan;
+  remaining -= towardLoan;
+  return { towardCard, towardLoan, remaining };
+}
+
+function useShield(player, reason, options = {}) {
+  const { silent = false } = options;
+  if (player.shields <= 0) {
+    return false;
+  }
+  player.shields -= 1;
+  if (!silent) {
+    logEvent("Protection Token", `${player.name} used a protection token to absorb ${reason}.`);
+  }
+  return true;
+}
+
+function getLoanPayment(player) {
+  if (player.loanBalance <= 0) {
+    return 0;
+  }
+  return Math.max(90, Math.round(player.loanBalance * 0.08));
+}
+
+function getGoalProgress(player) {
+  const savings = getSavings(player);
+  const debt = getTotalDebt(player);
+  return [
+    {
+      key: "stability",
+      title: "Stability",
+      complete: Boolean(player.housing) && player.emergencyFund >= 500,
+      detail: `${player.housing ? player.housing.name : "No stable housing"} and ${formatMoney(player.emergencyFund)} emergency fund`,
+    },
+    {
+      key: "mobility",
+      title: "Mobility",
+      complete: Boolean(player.transport) && !player.transportTrap,
+      detail: player.transport ? player.transport.name : "No transport plan yet",
+    },
+    {
+      key: "growth",
+      title: "Growth",
+      complete: Boolean(player.growthAsset),
+      detail: player.growthAsset ? player.growthAsset.name : "No wealth-building asset yet",
+    },
+    {
+      key: "security",
+      title: "Security",
+      complete: player.creditScore >= 750 && player.crisesSurvived >= 1,
+      detail: `${player.creditScore} credit and ${player.crisesSurvived} crisis handled`,
+    },
+    {
+      key: "savings",
+      title: "Savings Goal",
+      complete: savings >= 4000,
+      detail: `${formatMoney(savings)} liquid savings`,
+    },
+    {
+      key: "debt",
+      title: "Debt Under Control",
+      complete: debt <= 4000,
+      detail: `${formatMoney(debt)} total debt`,
+    },
+  ];
+}
+
+function countCompletedGoals(player) {
+  return getGoalProgress(player).filter((goal) => goal.complete).length;
+}
+
+function checkWinner(player) {
+  if (state.winnerId) {
+    return true;
+  }
+  const won = getGoalProgress(player).every((goal) => goal.complete);
+  if (won) {
+    state.winnerId = player.id;
+    state.phase = "game-over";
+    logEvent(
+      "Financial Freedom",
+      `${player.name} completed every milestone and reached Financial Freedom.`
+    );
+    renderAll();
+    return true;
+  }
+  return false;
+}
+
+function getLeader() {
+  if (!state.players.length) {
+    return null;
+  }
+  const sorted = [...state.players].sort((left, right) => {
+    const goalGap = countCompletedGoals(right) - countCompletedGoals(left);
+    if (goalGap !== 0) {
+      return goalGap;
+    }
+    const scoreGap = right.creditScore - left.creditScore;
+    if (scoreGap !== 0) {
+      return scoreGap;
+    }
+    return getSavings(right) - getSavings(left);
+  });
+  return sorted[0];
+}
+
+function getSafeReadyPhase(player) {
+  if (!player) {
+    return "setup";
+  }
+  if (player.reflectionModeActive && player.skipNextActionTurn) {
+    return "reflection";
+  }
+  return player.isAI ? "ai-ready" : "ready";
+}
+
+function recoverFromTurnError(context, error) {
+  if (state.recoveringError) {
+    console.error(`Credit Climb hit a nested ${context}:`, error);
+    return;
+  }
+
+  state.recoveringError = true;
+  console.error(`Credit Climb recovered from ${context}:`, error);
+
+  clearCreditFlash();
+  state.busy = false;
+
+  if (state.modal && typeof state.modal.resolve === "function") {
+    const resolver = state.modal.resolve;
+    state.modal = null;
+    try {
+      resolver(null);
+    } catch (resolveError) {
+      console.error("Credit Climb modal recovery failed:", resolveError);
+    }
+  } else {
+    state.modal = null;
+  }
+
+  const player = getCurrentPlayer();
+  if (!state.winnerId) {
+    state.phase = getSafeReadyPhase(player);
+  }
+
+  logEvent(
+    "Recovered Turn",
+    `The game hit a snag during ${context}, but the table was reset so ${player ? player.name : "the current player"} can keep going.`
+  );
+  try {
+    renderAll();
+  } finally {
+    state.recoveringError = false;
+  }
+}
+
+async function beginTurn() {
+  try {
+    if (!state.players.length || state.winnerId) {
+      return;
+    }
+
+    const player = getCurrentPlayer();
+    player.turnFlags = createTurnFlags();
+    performUpkeep(player);
+    checkMissionCompletion(player);
+    applyThresholdUnlocks(player);
+
+    if (checkWinner(player)) {
+      return;
+    }
+
+    if (player.reflectionModeActive && player.skipNextActionTurn) {
+      player.skipNextActionTurn = false;
+      state.phase = "reflection";
+      logEvent(
+        "Reflection Turn",
+        `${player.name} is below ${REFLECTION_SCORE} credit, so this turn becomes reflection time. No roll this round. The financial advisor recommends using the Hint button before the next big choice.`
+      );
+      renderAll();
+      await flushPlayerNotices(player);
+
+      if (!player.isAI) {
+        await showNotice(player, {
+          title: "Reflection Turn",
+          body: `Your score is still below ${REFLECTION_SCORE}, so this turn is for reflection only. Use the Hint button to check your financial advisor before your next active move.`,
+          artId: "repair",
+          artLabel: "Financial Advisor",
+          buttonLabel: "Got It",
+        });
+        renderAll();
+        return;
+      }
+
+      renderAll();
+      await delay(850);
+      advanceTurn();
+      return;
+    }
+
+    state.phase = player.isAI ? "ai-ready" : "ready";
+    renderAll();
+    await flushPlayerNotices(player);
+    logEvent("Turn Start", `${player.name} begins turn ${player.totalTurnsTaken} in the ${getLifeStage(player)} stage.`);
+    renderAll();
+
+    if (player.isAI) {
+      window.setTimeout(() => {
+        void runAiTurn();
+      }, 850);
+    }
+  } catch (error) {
+    recoverFromTurnError("beginTurn", error);
+  }
+}
+
+function performUpkeep(player, options = {}) {
+  const { silent = false } = options;
+  const scoreBeforeUpkeep = player.creditScore;
+  const passiveIncome = player.growthAsset ? player.growthAsset.passiveIncome : 0;
+  const knowledgeBonus = player.knowledge * 20;
+  const income = player.career.income + passiveIncome + knowledgeBonus;
+  player.cash += income;
+
+  if (!silent) {
+    logEvent("Income", `${player.name} collected ${formatMoney(income)} from ${player.career.name}${passiveIncome ? ` plus ${player.growthAsset.name}` : ""}.`);
+  }
+
+  getEssentialBills(player).forEach((bill) => payBill(player, bill, { silent }));
+
+  if (player.cardBalance > 0) {
+    handleCardPayment(player, { silent });
+  }
+
+  const utilization = getUtilization(player);
+  player.lowUtilizationStreak = utilization <= 0.3 ? player.lowUtilizationStreak + 1 : 0;
+
+  player.totalTurnsTaken += 1;
+  recalculateCreditScore(player);
+  player.lastUpkeepCreditDelta = player.creditScore - scoreBeforeUpkeep;
+  player.lastUpkeepCreditLabel = formatSignedNumber(player.lastUpkeepCreditDelta);
+  player.lastUpkeepCreditFeedback = buildUpkeepCreditFeedback(player);
+}
+
+function payBill(player, bill, options = {}) {
+  const { silent = false } = options;
+  if (bill.amount <= 0) {
+    return;
+  }
+
+  const cashCovered = takeCash(player, bill.amount);
+  const shortfall = bill.amount - cashCovered;
+
+  if (shortfall <= 0) {
+    return;
+  }
+
+  if (useShield(player, `${bill.label}`, { silent })) {
+    return;
+  }
+
+  if (bill.type === "housing") {
+    recordMissedPayment(player, "housingDefaultMarks");
+    player.housingRisk += 1;
+    addLoanBalance(player, shortfall + 40);
+    if (player.housingRisk >= 2) {
+      if (!silent) {
+        logEvent("Housing Trouble", `${player.name} lost stable housing after repeated missed payments.`);
+      }
+      player.housing = null;
+      player.housingRisk = 0;
+    }
+    return;
+  }
+
+  if (bill.type === "transport") {
+    recordMissedPayment(player, "transportDefaultMarks");
+    player.transportRisk += 1;
+    addLoanBalance(player, shortfall + 30);
+    if (player.transportRisk >= 2) {
+      if (!silent) {
+        logEvent("Transport Trouble", `${player.name} lost their current transport plan and has to reset.`);
+      }
+      player.transport = null;
+      player.transportTrap = false;
+      player.transportRisk = 0;
+    }
+    return;
+  }
+
+  if (bill.type === "loan") {
+    recordMissedPayment(player, "lateLoanMarks");
+    addLoanBalance(player, shortfall + 35);
+    return;
+  }
+}
+
+function handleCardPayment(player, options = {}) {
+  const { silent = false } = options;
+  const minimum = Math.max(35, Math.round(player.cardBalance * 0.2));
+  const canPayFull = player.cash >= player.cardBalance;
+
+  if (player.autopayMode === "full" && canPayFull) {
+    takeCash(player, player.cardBalance);
+    player.cardBalance = 0;
+    player.turnFlags.paidFull = true;
+    return;
+  }
+
+  if (player.cash >= minimum) {
+    takeCash(player, minimum);
+    player.cardBalance = Math.max(0, player.cardBalance - minimum);
+    player.turnFlags.paidMinimum = true;
+  } else if (!useShield(player, "a missed card payment", { silent })) {
+    recordMissedPayment(player, "lateCardMarks");
+    addCardBalance(player, 55);
+  }
+
+  if (player.cardBalance > 0) {
+    const interestRate = Math.max(0.03, 0.08 - player.knowledge * 0.01);
+    player.cardBalance = Math.round(player.cardBalance * (1 + interestRate));
+  }
+}
+
+function forecastNextCreditCheck(player) {
+  const previewPlayer = clonePlayerState(player);
+  const currentScore = previewPlayer.creditScore;
+  previewPlayer.turnFlags = createTurnFlags();
+  performUpkeep(previewPlayer, { silent: true });
+  return {
+    delta: previewPlayer.creditScore - currentScore,
+    score: previewPlayer.creditScore,
+    preview: getCreditPreview(previewPlayer),
+  };
+}
+
+function applyThresholdUnlocks(player) {
+  if (player.creditScore < REFLECTION_SCORE) {
+    if (!player.reflectionModeActive) {
+      player.reflectionModeActive = true;
+      player.skipNextActionTurn = true;
+      stepPlayerBack(player, 1);
+      logEvent(
+        "Reflection Time",
+        `${player.name} fell below ${REFLECTION_SCORE} credit, stepped back to ${BOARD_SPACES[player.position].name}, and entered reflection time. While the score stays low, every other action turn is skipped.`
+      );
+      queuePlayerNotice(player, {
+        title: "Reflection Time",
+        body: `Your credit score fell below ${REFLECTION_SCORE}. You take one step back, and while you stay under ${REFLECTION_SCORE} you must sit out every other action turn. Your financial advisor recommends using the Hint button before risky choices.`,
+        artId: "repair",
+        artLabel: "Minimum Line",
+      });
+    }
+  } else if (player.reflectionModeActive) {
+    player.reflectionModeActive = false;
+    player.skipNextActionTurn = false;
+    logEvent(
+      "Back on Track",
+      `${player.name} climbed back above ${REFLECTION_SCORE} credit and cleared reflection time.`
+    );
+    queuePlayerNotice(player, {
+      title: "Back on Track",
+      body: `You climbed back above ${REFLECTION_SCORE} credit. Reflection time is over, and you can take every turn again.`,
+      artId: "credit",
+      artLabel: "Recovery",
+    });
+  }
+
+  if (player.creditScore >= 670 && !player.limitUpgradeOne) {
+    player.limitUpgradeOne = true;
+    player.creditLimit += 300;
+    logEvent("Credit Unlock", `${player.name} unlocked a higher credit limit and more breathing room.`);
+  }
+
+  if (player.creditScore >= 740 && !player.limitUpgradeTwo) {
+    player.limitUpgradeTwo = true;
+    player.creditLimit += 400;
+    player.shields += 1;
+    logEvent("Credit Unlock", `${player.name} reached strong credit and gained a protection token.`);
+  }
+
+  if (player.creditScore >= DOUBLE_ROLL_UNLOCK_SCORE && !player.doubleRollUnlocked) {
+    player.doubleRollUnlocked = true;
+    logEvent(
+      "Premium Momentum",
+      `${player.name} reached ${DOUBLE_ROLL_UNLOCK_SCORE}+ credit and can now roll twice each turn, keeping the better die.`
+    );
+    queuePlayerNotice(player, {
+      title: "Premium Momentum",
+      body: `You reached ${DOUBLE_ROLL_UNLOCK_SCORE} credit. From now on, premium credit lets you roll twice each turn and keep the higher result.`,
+      artId: "unlock",
+      artLabel: "Score Reward",
+    });
+  }
+
+  if (player.creditScore >= 800 && !player.limitUpgradeThree) {
+    player.limitUpgradeThree = true;
+    player.shields += 1;
+    player.knowledge += 1;
+    logEvent("Credit Unlock", `${player.name} reached premium credit and gained bonus protection.`);
+  }
+}
+
+function drawMission(player) {
+  if (player.missions.length >= 2) {
+    player.cash += 120;
+    player.knowledge += 1;
+    logEvent("Mission Bonus", `${player.name} already had enough missions, so they gained a bonus instead.`);
+    return;
+  }
+
+  const activeMissionIds = player.missions.map((mission) => mission.id);
+  const options = MISSION_LIBRARY.filter(
+    (mission) =>
+      !activeMissionIds.includes(mission.id) &&
+      !player.completedMissionIds.includes(mission.id)
+  );
+
+  if (!options.length) {
+    player.cash += 150;
+    player.shields += 1;
+    logEvent("Mission Bonus", `${player.name} already conquered every mission type and collected a bonus.`);
+    return;
+  }
+
+  const mission = { ...randomFrom(options) };
+  player.missions.push(mission);
+  logEvent("New Mission", `${player.name} picked up "${mission.title}" to chase an extra reward.`);
+}
+
+function checkMissionCompletion(player) {
+  const remaining = [];
+  player.missions.forEach((mission) => {
+    if (!mission.isComplete(player)) {
+      remaining.push(mission);
+      return;
+    }
+
+    player.completedMissionIds.push(mission.id);
+    mission.applyReward(player);
+
+    logEvent(
+      "Mission Complete",
+      `${player.name} completed "${mission.title}" and earned ${mission.rewardText}.`
+    );
+  });
+  player.missions = remaining;
+}
+
+function createOption({
+  label,
+  description,
+  effect,
+  aiScore,
+  resultText,
+}) {
+  return { label, description, effect, aiScore, resultText };
+}
+
+function ensureDecision(decision) {
+  return {
+    title: decision.title,
+    body: decision.body,
+    artId: decision.artId || "generic",
+    artLabel: decision.artLabel,
+    options: decision.options.slice(0, 3),
+  };
+}
+
+function buildCreditDecision(player) {
+  const options = [];
+
+  options.push(
+    createOption({
+      label: "Set Autopay to Full",
+      description: "Prioritize paying the whole card balance whenever cash allows.",
+      effect: (current) => {
+        current.autopayMode = "full";
+        if (current.cardBalance > 0) {
+          const payment = Math.min(current.cash, 180);
+          current.cash -= payment;
+          current.cardBalance = Math.max(0, current.cardBalance - payment);
+        }
+      },
+      aiScore: (current) => 14 + (current.creditScore < 750 ? 16 : 8) + getUtilization(current) * 18,
+      resultText: (current) => `${current.name} switched to full autopay and tightened up their credit habits.`,
+    })
+  );
+
+  options.push(
+    createOption({
+      label: "Pay Extra on Debt",
+      description: "Throw $220 at your highest-interest balance right now.",
+      effect: (current) => {
+        const paid = takeCash(current, 220);
+        const debtHit = payHighestInterestDebt(current, paid);
+        if (paid < 220) {
+          addCardBalance(current, 220 - paid);
+        }
+        if (debtHit.towardCard > 0 || debtHit.towardLoan > 0) {
+          current.autopayMode = "full";
+        }
+      },
+      aiScore: (current) => 16 + getUtilization(current) * 34 + (getTotalDebt(current) > 4000 ? 18 : 0),
+      resultText: (current) => `${current.name} made an extra debt payment to protect their score.`,
+    })
+  );
+
+  if (!player.securedCardUsed && player.creditScore < 650) {
+    options.push(
+      createOption({
+        label: "Open a Secured Card",
+        description: "Put down $140, raise your limit, and create a safer rebuild path.",
+        effect: (current) => {
+          const payment = spendCashThenCard(current, 140);
+          current.creditLimit += 350;
+          current.securedCardUsed = true;
+          if (payment.shortfall > 0) {
+            addCardBalance(current, 20);
+          }
+        },
+        aiScore: (current) => 18 + (650 - current.creditScore),
+        resultText: (current) => `${current.name} opened a secured card to rebuild credit the smart way.`,
+      })
+    );
+  } else {
+    options.push(
+      createOption({
+        label: "Set Autopay to Minimum",
+        description: "Preserve cash now, but grow more slowly.",
+        effect: (current) => {
+          current.autopayMode = "minimum";
+          current.cash += 60;
+        },
+        aiScore: (current) => (current.cash < 500 ? 12 : -4) + (getTotalDebt(current) > 5000 ? 8 : 0),
+        resultText: (current) => `${current.name} preserved a little extra cash by easing off to minimum autopay.`,
+      })
+    );
+  }
+
+  return ensureDecision({
+    title: "Credit Choices",
+    body: "Lower balances, protect payments, or create more breathing room.",
+    artId: "credit",
+    options,
+  });
+}
+
+function buildLifestyleDecision(player) {
+  return ensureDecision({
+    title: "Shopping Trip",
+    body: "Bags and sneakers are on sale. Do you spend or stay disciplined?",
+    artId: "shopping",
+    options: [
+      createOption({
+        label: "Skip the Spree",
+        description: "Keep your budget steady and move $80 into your future.",
+        effect: (current) => {
+          current.cash += 80;
+        },
+        aiScore: (current) => 16 + (current.creditScore < 750 ? 8 : 0),
+        resultText: (current) => `${current.name} skipped the spree and kept the budget in line.`,
+      }),
+      createOption({
+        label: "Buy It With Cash",
+        description: "Spend $180 from cash for a short-term treat.",
+        effect: (current) => {
+          spendCashThenCard(current, 180);
+          current.turnFlags.splurged = true;
+        },
+        aiScore: (current) => (current.cash > 3500 ? 4 : -10),
+        resultText: (current) => `${current.name} treated themselves, but nothing hit the card.`,
+      }),
+      createOption({
+        label: "Put It on the Card",
+        description: "Add $260 to your card balance and raise utilization.",
+        effect: (current) => {
+          addCardBalance(current, 260);
+          current.turnFlags.splurged = true;
+        },
+        aiScore: (current) => -26 - getUtilization(current) * 32,
+        resultText: (current) => `${current.name} swiped now and left future-them with more utilization.`,
+      }),
+    ],
+  });
+}
+
+function buildSavingsDecision(player) {
+  return ensureDecision({
+    title: "Savings Sprint",
+    body: "Build a cushion, cut debt, or keep cash flexible.",
+    artId: "savings",
+    options: [
+      createOption({
+        label: "Fund the Emergency Buffer",
+        description: "Move $220 from cash into emergency savings.",
+        effect: (current) => {
+          const moved = depositToEmergencyFund(current, 220);
+          if (moved < 220) {
+            addCardBalance(current, 220 - moved);
+          }
+        },
+        aiScore: (current) => 12 + (current.emergencyFund < 500 ? 18 : 4) + (current.shields === 0 ? 6 : 0),
+        resultText: (current) => `${current.name} built more emergency savings for the next storm.`,
+      }),
+      createOption({
+        label: "Pay Down Debt",
+        description: "Use $250 to hit your highest-interest balance.",
+        effect: (current) => {
+          const paid = takeCash(current, 250);
+          payHighestInterestDebt(current, paid);
+        },
+        aiScore: (current) => 10 + getUtilization(current) * 30 + (getTotalDebt(current) > 4000 ? 15 : 0),
+        resultText: (current) => `${current.name} used this breather to shrink debt instead of spending.`,
+      }),
+      createOption({
+        label: "Keep Cash Flexible",
+        description: "Hold the cash now and collect a smaller $90 side gig bonus.",
+        effect: (current) => {
+          current.cash += 90;
+        },
+        aiScore: (current) => (current.cash < 450 ? 18 : 2),
+        resultText: (current) => `${current.name} stayed flexible and picked up extra cash instead.`,
+      }),
+    ],
+  });
+}
+
+function buildHousingDecision(player) {
+  const options = [];
+
+  if (!player.housing) {
+    options.push(
+      createOption({
+        label: "Rent a Shared Apartment",
+        description: "Requires 580+ credit. Pay $360 now and $220 each turn.",
+        effect: (current) => {
+          spendCashThenCard(current, 360);
+          current.housing = { name: "Shared Apartment", recurringCost: 220 };
+          current.housingRisk = 0;
+        },
+        aiScore: (current) => (!current.housing ? 28 : 4) + (current.creditScore >= 580 ? 12 : -12),
+        resultText: (current) => `${current.name} locked in a shared apartment and gained housing stability.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Go for a Premium Apartment",
+        description: "Requires 740+ credit. Pay $520 now and $260 each turn for a better lease.",
+        effect: (current) => {
+          spendCashThenCard(current, 520);
+          current.housing = { name: "Premium Apartment", recurringCost: 260 };
+          current.housingRisk = 0;
+        },
+        aiScore: (current) => (!current.housing ? 20 : 2) + (current.creditScore >= 740 ? 18 : -18),
+        resultText: (current) => `${current.name} used stronger credit to land a premium apartment.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Keep Couch Surfing",
+        description: "Pay nothing now, but housing stays unstable and progress slows.",
+        effect: (current) => {
+          current.cash += 70;
+        },
+        aiScore: (current) => (current.cash < 300 ? 12 : -10),
+        resultText: (current) => `${current.name} delayed stable housing to preserve cash.`,
+      })
+    );
+  } else {
+    options.push(
+      createOption({
+        label: "Keep the Current Place",
+        description: "Save $90 by staying steady and avoiding moving costs.",
+        effect: (current) => {
+          current.cash += 90;
+          current.housingRisk = 0;
+        },
+        aiScore: () => 10,
+        resultText: (current) => `${current.name} stayed put and kept housing steady.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Negotiate Better Terms",
+        description: "Pay $120 to lower rent by $25 per turn going forward.",
+        effect: (current) => {
+          spendCashThenCard(current, 120);
+          current.housing.recurringCost = Math.max(180, current.housing.recurringCost - 25);
+        },
+        aiScore: (current) => 12 + (current.housing.recurringCost > 220 ? 8 : 0),
+        resultText: (current) => `${current.name} negotiated a better lease and lowered future bills.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Upgrade Neighborhood",
+        description: "Spend $260 now, raise rent by $20, and improve your living setup.",
+        effect: (current) => {
+          spendCashThenCard(current, 260);
+          current.housing = {
+            name: "Upgraded Apartment",
+            recurringCost: current.housing.recurringCost + 20,
+          };
+        },
+        aiScore: (current) => (current.creditScore >= 740 && current.cash > 2200 ? 8 : -6),
+        resultText: (current) => `${current.name} upgraded their place for a smoother living situation.`,
+      })
+    );
+  }
+
+  return ensureDecision({
+    title: "Housing Move",
+    body: "Stable housing helps you win, but your credit changes what is available.",
+    artId: "housing",
+    options,
+  });
+}
+
+function buildTransportDecision(player) {
+  const options = [];
+
+  if (!player.transport) {
+    options.push(
+      createOption({
+        label: "Grab a City Transit Pass",
+        description: "Pay $90 now and $60 each turn for safe, low-cost mobility.",
+        effect: (current) => {
+          spendCashThenCard(current, 90);
+          current.transport = { name: "Transit Pass", recurringCost: 60 };
+          current.transportTrap = false;
+          current.transportRisk = 0;
+        },
+        aiScore: (current) => (!current.transport ? 18 : 6) + (current.creditScore < 670 ? 8 : 0),
+        resultText: (current) => `${current.name} chose affordable transit and protected monthly cash flow.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Finance a Reliable Used Car",
+        description: "Requires 670+ credit. Pay $260 now, add $720 loan debt, and $150 per turn.",
+        effect: (current) => {
+          spendCashThenCard(current, 260);
+          addLoanBalance(current, 720);
+          current.transport = { name: "Reliable Used Car", recurringCost: 150 };
+          current.transportTrap = current.creditScore < 670;
+          current.transportRisk = 0;
+        },
+        aiScore: (current) => (!current.transport ? 22 : 6) + (current.creditScore >= 670 ? 14 : -16),
+        resultText: (current) => `${current.name} financed a reliable used car to unlock better mobility.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Take a Buy-Here Pay-Here Deal",
+        description: "Easy approval, but it adds $1,150 debt and a painful $230 bill each turn.",
+        effect: (current) => {
+          spendCashThenCard(current, 120);
+          addLoanBalance(current, 1150);
+          current.transport = { name: "Debt Trap Ride", recurringCost: 230 };
+          current.transportTrap = true;
+          current.transportRisk = 0;
+          addBadLoanMark(current, 1);
+        },
+        aiScore: () => -28,
+        resultText: (current) => `${current.name} got approved fast, but the transport deal is a debt trap.`,
+      })
+    );
+  } else {
+    options.push(
+      createOption({
+        label: "Maintain Your Current Ride",
+        description: "Spend $90 on maintenance and reduce future risk.",
+        effect: (current) => {
+          spendCashThenCard(current, 90);
+          current.transportRisk = 0;
+        },
+        aiScore: () => 12,
+        resultText: (current) => `${current.name} kept their transportation reliable with routine upkeep.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Trade Down to Transit",
+        description: "Cut costs by switching to a lower monthly transit plan.",
+        effect: (current) => {
+          current.transport = { name: "Transit Pass", recurringCost: 60 };
+          current.transportTrap = false;
+          current.transportRisk = 0;
+        },
+        aiScore: (current) => (current.transport.recurringCost > 150 ? 14 : 4),
+        resultText: (current) => `${current.name} traded down to transit and lowered monthly costs.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Upgrade the Ride",
+        description: "Spend $240, add $320 debt, and improve your flexibility.",
+        effect: (current) => {
+          spendCashThenCard(current, 240);
+          addLoanBalance(current, 320);
+          current.transport = { name: "Upgraded Car", recurringCost: 170 };
+          current.transportTrap = false;
+          current.transportRisk = 0;
+        },
+        aiScore: (current) => (current.creditScore >= 740 && current.cash > 2400 ? 7 : -4),
+        resultText: (current) => `${current.name} upgraded transportation and kept it under control.`,
+      })
+    );
+  }
+
+  return ensureDecision({
+    title: "Mobility Decision",
+    body: "A good ride opens doors. A bad deal can follow you for years.",
+    artId: "transport",
+    options,
+  });
+}
+
+function buildGrowthDecision(player) {
+  const options = [];
+
+  if (!player.growthAsset) {
+    options.push(
+      createOption({
+        label: "Start a Side Hustle",
+        description: "Invest $220 now and earn $150 passive income each turn.",
+        effect: (current) => {
+          spendCashThenCard(current, 220);
+          current.growthAsset = { name: "Side Hustle", passiveIncome: 150, value: 850 };
+        },
+        aiScore: (current) => (!current.growthAsset ? 24 : 6) + (current.cash > 500 ? 8 : -8),
+        resultText: (current) => `${current.name} launched a side hustle and opened a growth lane.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Start Investing",
+        description: "Requires 740+ credit. Put $340 to work and earn $130 each turn.",
+        effect: (current) => {
+          spendCashThenCard(current, 340);
+          current.growthAsset = { name: "Index Fund", passiveIncome: 130, value: 980 };
+        },
+        aiScore: (current) => (!current.growthAsset ? 18 : 4) + (current.creditScore >= 740 ? 14 : -10),
+        resultText: (current) => `${current.name} started investing for a steadier future.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Wait and Save",
+        description: "Bank $110 instead of investing right now.",
+        effect: (current) => {
+          current.cash += 110;
+        },
+        aiScore: (current) => (current.cash < 450 ? 16 : 1),
+        resultText: (current) => `${current.name} passed on growth for now and held onto more cash.`,
+      })
+    );
+  } else {
+    options.push(
+      createOption({
+        label: "Reinvest the Profits",
+        description: "Spend $190 to increase passive income by $45 each turn.",
+        effect: (current) => {
+          spendCashThenCard(current, 190);
+          current.growthAsset.passiveIncome += 45;
+          current.growthAsset.value += 220;
+        },
+        aiScore: (current) => 14 + (getSavings(current) > 2000 ? 8 : 0),
+        resultText: (current) => `${current.name} reinvested and grew their wealth-building engine.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Take Profits to Savings",
+        description: "Move $180 into your emergency fund.",
+        effect: (current) => {
+          current.cash += 180;
+          depositToEmergencyFund(current, 180);
+        },
+        aiScore: (current) => (current.emergencyFund < 500 ? 18 : 6),
+        resultText: (current) => `${current.name} skimmed profits into cash reserves.`,
+      })
+    );
+
+    options.push(
+      createOption({
+        label: "Hold Steady",
+        description: "No extra cost. Keep current passive income rolling.",
+        effect: () => {},
+        aiScore: () => 7,
+        resultText: (current) => `${current.name} let the current growth plan keep compounding.`,
+      })
+    );
+  }
+
+  return ensureDecision({
+    title: "Growth Move",
+    body: "Pick the move that helps future-you, not just current-you.",
+    artId: "growth",
+    options,
+  });
+}
+
+function buildLoanShopDecision(player) {
+  const options = [
+    createOption({
+      label: "Take the Credit-Builder Loan",
+      description: "Borrow $320, owe $350 total, and avoid the worst predatory terms.",
+      effect: (current) => {
+        current.cash += 320;
+        addLoanBalance(current, 350);
+        clearBadLoanStatus(current, 1);
+      },
+      aiScore: (current) => (current.cash < 300 ? 12 : 2) + (current.creditScore < 670 ? 8 : 0),
+      resultText: (current) => `${current.name} chose the safer loan option and avoided a trap.`,
+    }),
+    createOption({
+      label: "Take the Payday Trap",
+      description: "Borrow $540 now, but owe $860 and add a lasting bad-loan mark.",
+      effect: (current) => {
+        current.cash += 540;
+        addLoanBalance(current, 860);
+        addBadLoanMark(current, 1);
+      },
+      aiScore: (current) => (current.cash < 120 ? 4 : -28),
+      resultText: (current) => `${current.name} grabbed quick cash and stepped into a predatory loan.`,
+    }),
+    createOption({
+      label: "Walk Away",
+      description: "Take no new debt and gain 1 knowledge instead.",
+      effect: (current) => {
+        current.knowledge += 1;
+      },
+      aiScore: (current) => 18 + (current.badLoan ? 8 : 0),
+      resultText: (current) => `${current.name} walked away from risky borrowing and got smarter instead.`,
+    }),
+  ];
+
+  if (player.badLoan && player.creditScore >= 670) {
+    options.unshift(
+      createOption({
+        label: "Refinance the Bad Loan",
+        description: "Requires 670+ credit. Cut loan debt by 30% and repair some damage.",
+        effect: (current) => {
+          current.loanBalance = Math.round(current.loanBalance * 0.7);
+          clearBadLoanStatus(current, 1);
+          current.refinanced = true;
+        },
+        aiScore: () => 40,
+        resultText: (current) => `${current.name} refinanced a bad loan and finally got room to breathe.`,
+      })
+    );
+  }
+
+  return ensureDecision({
+    title: "Loan Shop",
+    body: "Fast approval is not the same as a good deal.",
+    artId: "loan",
+    options,
+  });
+}
+
+function buildRepairDecision(player) {
+  return ensureDecision({
+    title: "Second Chance",
+    body: "You found a chance to clean up damage before it gets worse.",
+    artId: "repair",
+    options: [
+      createOption({
+        label: "Check Your Credit Report",
+        description: "Clear a billing or late-payment mark and clean up statement damage.",
+        effect: (current) => {
+          if (!resolveBillingIssue(current, 90)) {
+            clearDerogatoryMark(current, ["lateCardMarks", "lateLoanMarks", "transportDefaultMarks"]);
+          }
+        },
+        aiScore: (current) => 18 + (current.creditScore < 750 ? 14 : 0),
+        resultText: (current) => `${current.name} reviewed their report and tightened their profile.`,
+      }),
+      createOption({
+        label: "Pay Off a Damaging Balance",
+        description: "Throw $260 at debt and reduce utilization fast.",
+        effect: (current) => {
+          const paid = takeCash(current, 260);
+          payHighestInterestDebt(current, paid);
+        },
+        aiScore: (current) => 14 + getUtilization(current) * 36,
+        resultText: (current) => `${current.name} attacked a damaging balance and improved their profile.`,
+      }),
+      createOption({
+        label: "Build Consumer Protections",
+        description: "Gain 1 shield and 1 knowledge for the next crisis.",
+        effect: (current) => {
+          current.shields += 1;
+          current.knowledge += 1;
+        },
+        aiScore: (current) => (current.shields === 0 ? 18 : 9),
+        resultText: (current) => `${current.name} built more protection before the next curveball hit.`,
+      }),
+    ],
+  });
+}
+
+function buildOpportunityDecision(player) {
+  if (!player.housing) {
+    return buildHousingDecision(player);
+  }
+  if (!player.transport || player.transportTrap) {
+    return buildTransportDecision(player);
+  }
+  if (!player.growthAsset) {
+    return buildGrowthDecision(player);
+  }
+  if (player.creditScore < 740 || getUtilization(player) > 0.3) {
+    return buildRepairDecision(player);
+  }
+
+  return ensureDecision({
+    title: "Strong Credit Unlock",
+    body: "Your score opened a door. Use it to save, repay, or grow.",
+    artId: "unlock",
+    options: [
+      createOption({
+        label: "Waive Security Deposits",
+        description: "Collect $260 back thanks to strong credit and lower fees.",
+        effect: (current) => {
+          current.cash += 260;
+        },
+        aiScore: () => 14,
+        resultText: (current) => `${current.name} used strong credit to avoid costly deposits and fees.`,
+      }),
+      createOption({
+        label: "Prepay a Big Chunk of Debt",
+        description: "Pay $320 now and cut down future drag.",
+        effect: (current) => {
+          const paid = takeCash(current, 320);
+          payHighestInterestDebt(current, paid);
+        },
+        aiScore: (current) => 12 + (getTotalDebt(current) > 2500 ? 8 : 0),
+        resultText: (current) => `${current.name} turned strong credit into cleaner finances.`,
+      }),
+      createOption({
+        label: "Expand Your Growth Asset",
+        description: "Invest $260 to add $55 passive income each turn.",
+        effect: (current) => {
+          spendCashThenCard(current, 260);
+          if (!current.growthAsset) {
+            current.growthAsset = { name: "Side Hustle", passiveIncome: 150, value: 850 };
+          } else {
+            current.growthAsset.passiveIncome += 55;
+            current.growthAsset.value += 280;
+          }
+        },
+        aiScore: (current) => (current.cash > 1200 ? 16 : 3),
+        resultText: (current) => `${current.name} doubled down on growth and future income.`,
+      }),
+    ],
+  });
+}
+
+function buildFreedomDecision(player) {
+  const goals = getGoalProgress(player);
+  const unmet = goals.filter((goal) => !goal.complete);
+
+  if (!unmet.length) {
+    return null;
+  }
+
+  const firstGap = unmet[0];
+  if (firstGap.key === "stability") {
+    player.cash += 140;
+    depositToEmergencyFund(player, 140);
+    logEvent("Freedom Check", `${player.name} saw the gap in stability and banked more emergency money.`);
+    return null;
+  }
+
+  if (firstGap.key === "mobility") {
+    player.cash += 120;
+    logEvent("Freedom Check", `${player.name} got a helpful push toward better transportation.`);
+    return null;
+  }
+
+  if (firstGap.key === "growth") {
+    player.cash += 180;
+    logEvent("Freedom Check", `${player.name} got seed money to help start a growth asset.`);
+    return null;
+  }
+
+  if (firstGap.key === "security") {
+    player.shields += 1;
+    clearDerogatoryMark(player, ["lateCardMarks", "lateLoanMarks", "unresolvedBillingMarks", "transportDefaultMarks"]);
+    logEvent("Freedom Check", `${player.name} cleaned up one credit issue and gained protection for the next emergency.`);
+    return null;
+  }
+
+  if (firstGap.key === "savings") {
+    player.cash += 220;
+    logEvent("Freedom Check", `${player.name} found a boost that moved them closer to the savings goal.`);
+    return null;
+  }
+
+  if (firstGap.key === "debt") {
+    const paid = takeCash(player, Math.min(player.cash, 240));
+    payHighestInterestDebt(player, paid);
+    logEvent("Freedom Check", `${player.name} used the checkpoint to attack debt before the finish line.`);
+  }
+  return null;
+}
+
+const LIFE_EVENT_FACTORIES = [
+  (player) =>
+    ensureDecision({
+      title: "Phone Upgrade",
+      body: "Your phone still works. Upgrade now or keep the cash?",
+      artId: "phone",
+      options: [
+        createOption({
+          label: "Keep the Old Phone",
+          description: "Save money, stay focused, and avoid new utilization.",
+          effect: (current) => {
+            current.cash += 40;
+          },
+          aiScore: () => 16,
+          resultText: (current) => `${current.name} skipped the shiny upgrade and stayed disciplined.`,
+        }),
+        createOption({
+          label: "Buy It With Cash",
+          description: "Spend $220 now and enjoy the upgrade without debt.",
+          effect: (current) => {
+            spendCashThenCard(current, 220);
+            current.turnFlags.splurged = true;
+          },
+          aiScore: (current) => (current.cash > 2500 ? 6 : -8),
+          resultText: (current) => `${current.name} upgraded the phone using cash.`,
+        }),
+        createOption({
+          label: "Finance It on the Card",
+          description: "Add $260 to card balance and raise utilization.",
+          effect: (current) => {
+            addCardBalance(current, 260);
+            current.turnFlags.splurged = true;
+          },
+          aiScore: () => -24,
+          resultText: (current) => `${current.name} financed the phone and pushed utilization higher.`,
+        }),
+      ],
+    }),
+  (player) =>
+    ensureDecision({
+      title: "Billing Error",
+      body: "A mystery charge just appeared on your statement.",
+      artId: "billing",
+      options: [
+        createOption({
+          label: "Dispute It Immediately",
+          description: "Remove the charge, gain 1 knowledge, and keep a billing mark off your report.",
+          effect: (current) => {
+            if (!resolveBillingIssue(current, 90)) {
+              current.billingErrorsResolved += 1;
+            }
+            current.knowledge += 1;
+          },
+          aiScore: () => 28,
+          resultText: (current) => `${current.name} disputed the billing error and protected their credit.`,
+        }),
+        createOption({
+          label: "Pay It and Move On",
+          description: "Lose $90 now, but keep the problem small.",
+          effect: (current) => {
+            spendCashThenCard(current, 90);
+          },
+          aiScore: () => 8,
+          resultText: (current) => `${current.name} paid the charge just to move on.`,
+        }),
+        createOption({
+          label: "Ignore It",
+          description: "The charge sticks, utilization rises, and the error stays unresolved.",
+          effect: (current) => {
+            addUnresolvedBillingMark(current, 1);
+            addCardBalance(current, 90);
+          },
+          aiScore: () => -20,
+          resultText: (current) => `${current.name} ignored the billing error and let it hurt their finances.`,
+        }),
+      ],
+    }),
+  (player) =>
+    ensureDecision({
+      title: "Unexpected Support",
+      body: "A mentor or relative offers help. Where should it go?",
+      artId: "support",
+      options: [
+        createOption({
+          label: "Build Savings",
+          description: "Gain $220 and move it straight into emergency savings.",
+          effect: (current) => {
+            current.cash += 220;
+            depositToEmergencyFund(current, 220);
+          },
+          aiScore: (current) => (current.emergencyFund < 500 ? 22 : 10),
+          resultText: (current) => `${current.name} used outside help to strengthen their emergency fund.`,
+        }),
+        createOption({
+          label: "Pay Down Debt",
+          description: "Get $220 and throw it at your highest-interest balance.",
+          effect: (current) => {
+            current.cash += 220;
+            const paid = takeCash(current, 220);
+            payHighestInterestDebt(current, paid);
+          },
+          aiScore: (current) => 14 + (getTotalDebt(current) > 3500 ? 8 : 0),
+          resultText: (current) => `${current.name} used support to shrink debt instead of spending it.`,
+        }),
+        createOption({
+          label: "Treat Yourself",
+          description: "Pocket $220, but the discipline streak ends.",
+          effect: (current) => {
+            current.cash += 220;
+            current.turnFlags.splurged = true;
+          },
+          aiScore: () => -6,
+          resultText: (current) => `${current.name} enjoyed the windfall right away.`,
+        }),
+      ],
+    }),
+  (player) =>
+    ensureDecision({
+      title: "Training Opportunity",
+      body: "A short program could raise your income. Do you invest?",
+      artId: "training",
+      options: [
+        createOption({
+          label: "Take the Course",
+          description: "Spend $180 now and increase your income by $70 each turn.",
+          effect: (current) => {
+            spendCashThenCard(current, 180);
+            current.career = {
+              ...current.career,
+              income: current.career.income + 70,
+            };
+          },
+          aiScore: (current) => 18 + (current.cash > 250 ? 6 : -4),
+          resultText: (current) => `${current.name} invested in training and boosted future income.`,
+        }),
+        createOption({
+          label: "Ask for Employer Help",
+          description: "Gain $100 now and 1 knowledge, but no income bump.",
+          effect: (current) => {
+            current.cash += 100;
+            current.knowledge += 1;
+          },
+          aiScore: () => 10,
+          resultText: (current) => `${current.name} found a safer middle path with employer help.`,
+        }),
+        createOption({
+          label: "Pass for Now",
+          description: "No cost, no gain.",
+          effect: () => {},
+          aiScore: () => 4,
+          resultText: (current) => `${current.name} passed on the training opportunity for now.`,
+        }),
+      ],
+    }),
+];
+
+const CRISIS_FACTORIES = [
+  (player) =>
+    ensureDecision({
+      title: "Medical Emergency",
+      body: "A sudden medical bill lands hard. How do you cover it?",
+      artId: "medical",
+      options: [
+        createOption({
+          label: "Use the Emergency Fund",
+          description: "Spend $320 from savings and stay on track.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            const used = takeEmergency(current, 320);
+            const shortfall = 320 - used;
+            if (shortfall > 0) {
+              spendCashThenCard(current, shortfall);
+            }
+            current.turnFlags.crisisHandled = true;
+          },
+          aiScore: (current) => 26 + (current.emergencyFund >= 320 ? 10 : -4),
+          resultText: (current) => `${current.name} used the emergency fund to survive the medical bill.`,
+        }),
+        createOption({
+          label: "Swipe the Card",
+          description: "Add $360 to your card balance and raise utilization.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            addCardBalance(current, 360);
+            current.turnFlags.crisisHandled = true;
+          },
+          aiScore: (current) => (current.emergencyFund < 150 ? 8 : -8),
+          resultText: (current) => `${current.name} leaned on the credit card to absorb the medical emergency.`,
+        }),
+        createOption({
+          label: "Miss a Payment Elsewhere",
+          description: "Protect cash now, but add a real missed-payment mark to your history.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            recordMissedPayment(current, "lateLoanMarks");
+            addLoanBalance(current, 120);
+          },
+          aiScore: () => -30,
+          resultText: (current) => `${current.name} took the hit and missed a payment to survive the crisis.`,
+        }),
+      ],
+    }),
+  (player) =>
+    ensureDecision({
+      title: "Hours Cut at Work",
+      body: "Your paycheck just shrank. How do you cover the gap?",
+      artId: "paycheck",
+      options: [
+        createOption({
+          label: "Tap Cash and Savings",
+          description: "Lose $260 now, but keep all obligations current.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            const fromEmergency = takeEmergency(current, 140);
+            const remainder = 260 - fromEmergency;
+            spendCashThenCard(current, remainder);
+            current.turnFlags.crisisHandled = true;
+          },
+          aiScore: (current) => 20 + (getSavings(current) > 300 ? 8 : 0),
+          resultText: (current) => `${current.name} covered the income drop without falling behind.`,
+        }),
+        createOption({
+          label: "Use a Protection Token",
+          description: "Spend a shield instead of taking on new damage.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            if (!useShield(current, "an income shock")) {
+              addCardBalance(current, 180);
+            }
+            current.turnFlags.crisisHandled = true;
+          },
+          aiScore: (current) => (current.shields > 0 ? 24 : 2),
+          resultText: (current) => `${current.name} used protection to keep the setback from snowballing.`,
+        }),
+        createOption({
+          label: "Take a Bad Short-Term Loan",
+          description: "Get through the month, but add $320 debt and another bad-loan mark.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            addLoanBalance(current, 320);
+            addBadLoanMark(current, 1);
+            current.turnFlags.crisisHandled = true;
+          },
+          aiScore: (current) => (current.cash < 150 ? 6 : -20),
+          resultText: (current) => `${current.name} survived the income shock, but at the cost of new bad debt.`,
+        }),
+      ],
+    }),
+  (player) =>
+    ensureDecision({
+      title: "Housing Crisis",
+      body: "A repair or move-out surprise just hit your housing plan.",
+      artId: "housing",
+      artLabel: "Housing Pressure",
+      options: [
+        createOption({
+          label: "Pay the Cost and Stay Stable",
+          description: "Cover $280 now and keep housing secure.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            const emergencyUse = takeEmergency(current, 160);
+            const remainder = 280 - emergencyUse;
+            spendCashThenCard(current, remainder);
+            current.housingRisk = 0;
+            current.turnFlags.crisisHandled = true;
+          },
+          aiScore: (current) => 20 + (current.housing ? 8 : 0),
+          resultText: (current) => `${current.name} paid the housing surprise and kept stability intact.`,
+        }),
+        createOption({
+          label: "Use a Shield Token",
+          description: "Burn protection to keep your lease from wobbling.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            if (!useShield(current, "a housing emergency")) {
+              addCardBalance(current, 190);
+            }
+            current.housingRisk = 0;
+            current.turnFlags.crisisHandled = true;
+          },
+          aiScore: (current) => (current.shields > 0 ? 22 : 4),
+          resultText: (current) => `${current.name} used protection to keep the housing crisis from spreading.`,
+        }),
+        createOption({
+          label: "Delay It",
+          description: "Miss the fix, add a housing default mark, and increase housing risk.",
+          effect: (current) => {
+            current.turnFlags.facedCrisis = true;
+            recordMissedPayment(current, "housingDefaultMarks");
+            current.housingRisk += 1;
+            addLoanBalance(current, 100);
+          },
+          aiScore: () => -26,
+          resultText: (current) => `${current.name} delayed the fix and let the housing crisis hurt their credit.`,
+        }),
+      ],
+    }),
+];
+
+const SETBACK_FACTORIES = [
+  () => ({
+    title: "Unexpected Medical Expense",
+    artId: "medical",
+    artLabel: "Hard Luck",
+    apply: (current) => {
+      addCardBalance(current, 340);
+    },
+    getBody: () =>
+      `An unexpected medical bill landed on your card. Utilization jumped and your balance rose by ${formatMoney(340)}. That damage will pull against your score on the next credit recalculation.`,
+    getLog: (current) =>
+      `${current.name} got hit with an unexpected medical bill and added ${formatMoney(340)} to card balances.`,
+  }),
+  () => ({
+    title: "Missed Credit Card Payment",
+    artId: "billing",
+    artLabel: "Hard Luck",
+    requires: (current) => current.cardBalance > 0,
+    apply: (current) => {
+      recordMissedPayment(current, "lateCardMarks");
+      addCardBalance(current, 85);
+    },
+    getBody: () =>
+      `You accidentally missed your credit card payment. Late fees added ${formatMoney(85)} to the balance and a real late-payment mark hit your history.`,
+    getLog: (current) =>
+      `${current.name} missed a credit card payment and picked up ${formatMoney(85)} in extra balance plus a late-payment mark.`,
+  }),
+  () => ({
+    title: "Missed Loan Payment",
+    artId: "paycheck",
+    artLabel: "Hard Luck",
+    requires: (current) => current.loanBalance > 0,
+    apply: (current) => {
+      recordMissedPayment(current, "lateLoanMarks");
+      addLoanBalance(current, 125);
+    },
+    getBody: () =>
+      `You were stretched thin and missed a loan payment. Fees added ${formatMoney(125)} to what you owe and a late-loan mark was added to your history.`,
+    getLog: (current) =>
+      `${current.name} missed a loan payment, added ${formatMoney(125)} to loan debt, and took a late-loan mark.`,
+  }),
+  () => ({
+    title: "Utility Bill Sent Late",
+    artId: "billing",
+    artLabel: "Hard Luck",
+    apply: (current) => {
+      recordMissedPayment(current);
+      addUnresolvedBillingMark(current, 1);
+      addCardBalance(current, 140);
+    },
+    getBody: () =>
+      `A utility bill slipped through the cracks and reported late. Another ${formatMoney(140)} hit your balances, and the late report added new derogatory damage.`,
+    getLog: (current) =>
+      `${current.name} had a utility bill report late, added ${formatMoney(140)} to balances, and took new derogatory damage.`,
+  }),
+];
+
+function buildKnowledgeEffect(player) {
+  const cards = [
+    {
+      title: "Check Your Report",
+      body: `${player.name} reviewed their report and found small fixes.`,
+      apply: (current) => {
+        current.knowledge += 1;
+        if (!resolveBillingIssue(current, 90)) {
+          clearDerogatoryMark(current, ["lateCardMarks", "lateLoanMarks", "unresolvedBillingMarks"]);
+        }
+      },
+    },
+    {
+      title: "Know Your Rights",
+      body: `${player.name} learned consumer protections and gained a shield.`,
+      apply: (current) => {
+        current.knowledge += 1;
+        current.shields += 1;
+      },
+    },
+    {
+      title: "Utilization Lesson",
+      body: `${player.name} learned how low balances improve borrowing power.`,
+      apply: (current) => {
+        const paid = takeCash(current, Math.min(120, current.cash));
+        payHighestInterestDebt(current, paid);
+      },
+    },
+    {
+      title: "Comparison Shopping",
+      body: `${player.name} learned to compare offers and saved money.`,
+      apply: (current) => {
+        current.cash += 140;
+        current.knowledge += 1;
+      },
+    },
+  ];
+
+  const card = randomFrom(cards);
+  card.apply(player);
+  logEvent(card.title, card.body);
+}
+
+function triggerRandomSetback(player) {
+  const availableSetbacks = SETBACK_FACTORIES
+    .map((factory) => factory())
+    .filter((setback) => !setback.requires || setback.requires(player));
+  const setback = randomFrom(availableSetbacks);
+
+  setback.apply(player);
+
+  logEvent(setback.title, setback.getLog(player));
+  queuePlayerNotice(player, {
+    title: setback.title,
+    body: setback.getBody(player),
+    artId: setback.artId,
+    artLabel: setback.artLabel,
+    buttonLabel: "Keep Climbing",
+  });
+}
+
+async function offerDecision(player, decision) {
+  if (!decision || !decision.options.length) {
+    return null;
+  }
+
+  if (player.isAI) {
+    await delay(700);
+    const picked = chooseAiOption(player, decision);
+    applyDecisionChoice(player, decision, picked);
+    renderAll();
+    return picked;
+  }
+
+  return new Promise((resolve) => {
+    state.modal = { mode: "decision", playerId: player.id, decision, resolve };
+    renderAll();
+  });
+}
+
+function chooseAiOption(player, decision) {
+  return decision.options.reduce((best, option) => {
+    const score = option.aiScore ? option.aiScore(player) : 0;
+    if (!best || score > best.score) {
+      return { option, score };
+    }
+    return best;
+  }, null).option;
+}
+
+function applyDecisionChoice(player, decision, option) {
+  const beforeCreditForecast = forecastNextCreditCheck(player);
+  option.effect(player);
+  if (option.resultText) {
+    logEvent(decision.title, option.resultText(player));
+  } else {
+    logEvent(decision.title, `${player.name} chose ${option.label}.`);
+  }
+
+  if (player.turnFlags.facedCrisis && !player.turnFlags.missedPayment) {
+    player.turnFlags.crisisHandled = true;
+  }
+
+  checkMissionCompletion(player);
+  applyThresholdUnlocks(player);
+  checkWinner(player);
+  return buildCreditFlashFeedback(beforeCreditForecast, forecastNextCreditCheck(player));
+}
+
+async function handleSpace(player, space) {
+  if (state.winnerId) {
+    return;
+  }
+
+  switch (space.kind) {
+    case "start":
+      player.cash += 120;
+      logEvent("Fresh Start", `${player.name} landed on Fresh Start and grabbed a small bonus.`);
+      break;
+    case "mission":
+      drawMission(player);
+      break;
+    case "credit":
+      await offerDecision(player, buildCreditDecision(player));
+      break;
+    case "life":
+      await offerDecision(player, randomFrom(LIFE_EVENT_FACTORIES)(player));
+      break;
+    case "opportunity":
+      await offerDecision(player, buildOpportunityDecision(player));
+      break;
+    case "savings":
+      await offerDecision(player, buildSavingsDecision(player));
+      break;
+    case "housing":
+      await offerDecision(player, buildHousingDecision(player));
+      break;
+    case "knowledge":
+      buildKnowledgeEffect(player);
+      break;
+    case "lifestyle":
+      await offerDecision(player, buildLifestyleDecision(player));
+      break;
+    case "transport":
+      await offerDecision(player, buildTransportDecision(player));
+      break;
+    case "crisis":
+      await offerDecision(player, randomFrom(CRISIS_FACTORIES)(player));
+      break;
+    case "setback":
+      triggerRandomSetback(player);
+      break;
+    case "refund": {
+      const refund = 180 + player.knowledge * 40 + (player.creditScore >= 740 ? 80 : 0);
+      player.cash += refund;
+      logEvent("Tax Refund", `${player.name} picked up ${formatMoney(refund)} and got room to breathe.`);
+      break;
+    }
+    case "loan":
+      await offerDecision(player, buildLoanShopDecision(player));
+      break;
+    case "growth":
+      await offerDecision(player, buildGrowthDecision(player));
+      break;
+    case "repair":
+      await offerDecision(player, buildRepairDecision(player));
+      break;
+    case "freedom":
+      buildFreedomDecision(player);
+      break;
+    default:
+      break;
+  }
+
+  if (!player.turnFlags.splurged) {
+    player.stableSpendingStreak += 1;
+  } else {
+    player.stableSpendingStreak = 0;
+  }
+
+  if (player.turnFlags.facedCrisis && player.turnFlags.crisisHandled && !player.turnFlags.missedPayment) {
+    player.crisesSurvived += 1;
+    player.turnFlags.crisisHandled = false;
+    logEvent("Crisis Survived", `${player.name} handled the emergency without missing a payment.`);
+  }
+
+  checkMissionCompletion(player);
+  applyThresholdUnlocks(player);
+  checkWinner(player);
+  await flushPlayerNotices(player);
+}
+
+async function movePlayer(player, steps) {
+  for (let count = 0; count < steps; count += 1) {
+    player.position = (player.position + 1) % BOARD_SPACES.length;
+    if (player.position === 0) {
+      player.laps += 1;
+      player.age += 1;
+      player.cash += 320;
+      logEvent(
+        "Birthday Lap",
+        `${player.name} passed Fresh Start, collected ${formatMoney(320)}, and moved into the ${getLifeStage(player)} stage at age ${player.age}.`
+      );
+    }
+    renderAll();
+    await delay(190);
+  }
+}
+
+async function runTurn(player) {
+  try {
+    state.busy = true;
+    state.phase = "rolling";
+    const roll = getRollOutcome(player);
+    state.lastDie = roll.value;
+    state.lastRollNote = roll.note;
+    logEvent("Dice Roll", roll.message);
+    renderAll();
+    await movePlayer(player, roll.value);
+    const space = BOARD_SPACES[player.position];
+    logEvent("Landing", `${player.name} landed on ${space.name}. ${space.blurb}`);
+    renderAll();
+    await handleSpace(player, space);
+
+    if (player.reflectionModeActive) {
+      player.skipNextActionTurn = true;
+    }
+
+    if (!state.winnerId) {
+      advanceTurn();
+    } else {
+      renderAll();
+    }
+  } catch (error) {
+    recoverFromTurnError("runTurn", error);
+  } finally {
+    state.busy = false;
+    renderAll();
+  }
+}
+
+async function runAiTurn() {
+  const player = getCurrentPlayer();
+  if (!player || !player.isAI || state.busy || state.phase !== "ai-ready") {
+    return;
+  }
+  await runTurn(player);
+}
+
+function advanceTurn() {
+  state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+  if (state.currentPlayerIndex === 0) {
+    state.round += 1;
+  }
+  state.lastDie = null;
+  state.lastRollNote = null;
+  renderAll();
+  void beginTurn();
+}
+
+function getInitials(name) {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function renderHeroStats() {
+  const leader = getLeader();
+  const bestCredit = state.players.length
+    ? state.players.reduce((highest, player) => (player.creditScore > highest.creditScore ? player : highest), state.players[0])
+    : null;
+
+  elements.heroStats.innerHTML = `
+    <div class="hero-stat-card">
+      <span class="hero-stat-label">Round</span>
+      <span class="hero-stat-value">${state.round}</span>
+    </div>
+    <div class="hero-stat-card">
+      <span class="hero-stat-label">Leader</span>
+      <span class="hero-stat-value">${leader ? leader.name : "None"}</span>
+    </div>
+    <div class="hero-stat-card">
+      <span class="hero-stat-label">Best Credit</span>
+      <span class="hero-stat-value">${bestCredit ? bestCredit.creditScore : "--"}</span>
+    </div>
+  `;
+}
+
+function renderBoard() {
+  const currentPlayer = getCurrentPlayer();
+
+  elements.board.innerHTML = BOARD_SPACES.map((space, index) => {
+    const [row, column] = BOARD_COORDINATES[index];
+    const onSpace = state.players.filter((player) => player.position === index);
+    const active = currentPlayer && currentPlayer.position === index;
+    return `
+      <div
+        class="board-space ${space.id === "fresh-start" ? "start-space" : ""} ${active ? "active" : ""}"
+        style="grid-row:${row};grid-column:${column};--space-accent:${SPACE_ACCENTS[space.kind]};"
+      >
+        <div>
+          <span class="space-badge">${space.badge}</span>
+          <h3 class="space-name">${space.name}</h3>
+          <p class="space-brief">${space.blurb}</p>
+        </div>
+        <div class="space-footer">
+          <span class="space-index">${String(index + 1).padStart(2, "0")}</span>
+          <div class="token-stack">
+            ${onSpace
+              .map(
+                (player) => `
+                  <span class="token ${currentPlayer && player.id === currentPlayer.id ? "current-token" : ""}" style="background:${player.color};">${getInitials(player.name)}</span>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderTurnPanel() {
+  if (!state.players.length) {
+    elements.turnPanel.innerHTML = `
+      <div class="panel-heading"><h2>Current Turn</h2></div>
+      <p class="turn-status">${isInLiveRoom() && !liveSession.gameStarted ? "Join the lobby and wait for the host to start." : "Start a game to begin the climb."}</p>
+    `;
+    return;
+  }
+
+  const player = getCurrentPlayer();
+  const canAct = canLocalClientActOnCurrentTurn(player);
+  const scoreBand = getScoreBand(player);
+  const winner = state.winnerId && state.winnerId === player.id;
+  const creditCheckBadgeClass =
+    player.lastUpkeepCreditDelta > 0 ? "up" : player.lastUpkeepCreditDelta < 0 ? "down" : "steady";
+  const thinFileNote =
+    player.lastUpkeepCreditDelta === 0 && player.creditRawTargetScore > player.creditHistoryCeiling
+      ? "Positive habits are building, but your credit file is still too thin for a bigger jump yet."
+      : "";
+  const creditCheckNote =
+    player.lastUpkeepCreditDelta === null
+      ? ""
+      : `Start-of-turn credit check: ${player.lastUpkeepCreditLabel} after income, bills, and autopay.`;
+
+  let status = "Choose the next move.";
+  if (state.phase === "ready") {
+    status = "Roll to move into the next chapter.";
+  } else if (state.phase === "reflection") {
+    status = "Reflection turn. Ask the advisor, then continue.";
+  } else if (state.phase === "ai-ready") {
+    status = "Thinking through the board.";
+  } else if (state.phase === "rolling") {
+    status = "On the move.";
+  } else if (state.phase === "game-over" && winner) {
+    status = "Reached Financial Freedom and won.";
+  }
+  if (!canAct && isInLiveRoom() && !player.isAI && state.phase !== "game-over") {
+    status = `Waiting for ${player.name}${liveSession.isHost ? "" : " or the host"} to act.`;
+  }
+
+  elements.turnPanel.innerHTML = `
+    <div class="turn-header">
+      <div>
+        <h2>${player.name}</h2>
+        <p class="turn-status">${status}</p>
+        ${winner ? '<span class="winner-ribbon">Financial Freedom</span>' : ""}
+      </div>
+      <span class="turn-pill" style="background:${scoreBand.color}18;color:${scoreBand.color};border-color:${scoreBand.color}55;">
+        ${scoreBand.label}
+      </span>
+    </div>
+
+    <div class="turn-summary-strip">
+      <div class="turn-stat-pill">
+        <span>Credit</span>
+        <strong>${player.creditScore}</strong>
+      </div>
+      <div class="turn-stat-pill">
+        <span>Saved</span>
+        <strong>${formatMoney(getSavings(player))}</strong>
+      </div>
+      <div class="turn-stat-pill">
+        <span>Debt</span>
+        <strong>${formatMoney(getTotalDebt(player))}</strong>
+      </div>
+      <div class="turn-stat-pill">
+        <span>Stage</span>
+        <strong>${getLifeStage(player)}</strong>
+      </div>
+      <div class="turn-stat-pill">
+        <span>Die</span>
+        <strong>${state.lastDie ?? "--"}</strong>
+      </div>
+    </div>
+    ${state.lastRollNote ? `<p class="turn-inline-note">${state.lastRollNote}</p>` : ""}
+    ${creditCheckNote ? `<div class="credit-check-banner ${creditCheckBadgeClass}">${creditCheckNote}</div>` : ""}
+    ${thinFileNote ? `<p class="turn-inline-note">${thinFileNote}</p>` : ""}
+
+    <div class="perk-row">
+      ${player.doubleRollUnlocked ? `<span class="status-chip bonus">Premium momentum: roll twice and keep the better die.</span>` : ""}
+      ${player.reflectionModeActive ? `<span class="status-chip warning">Reflection zone: below ${REFLECTION_SCORE}, every other action turn is skipped. Ask the advisor for help.</span>` : ""}
+    </div>
+
+    <div class="action-row turn-action-row">
+      <button class="primary-button" id="roll-button" type="button" ${player.isAI || state.busy || !["ready", "reflection"].includes(state.phase) || !canAct ? "disabled" : ""}>
+        ${state.phase === "reflection" ? "End Reflection" : "Roll Dice"}
+      </button>
+      <button class="secondary-button" id="hint-button" type="button" ${player.isAI || !canAct ? "disabled" : ""}>
+        ${player.reflectionModeActive ? "Ask Advisor" : "Get Hint"}
+      </button>
+    </div>
+  `;
+
+  const rollButton = document.getElementById("roll-button");
+  if (rollButton) {
+    rollButton.addEventListener("click", () => {
+      if (!canLocalClientActOnCurrentTurn(player)) {
+        return;
+      }
+      if (isLiveMirrorClient() && !liveSession.isHost) {
+        if (state.phase === "ready") {
+          sendLivePlayerAction({ type: "roll" });
+        } else if (state.phase === "reflection") {
+          sendLivePlayerAction({ type: "end-reflection" });
+        }
+        return;
+      }
+      if (!state.busy && state.phase === "ready") {
+        void runTurn(getCurrentPlayer());
+      } else if (!state.busy && state.phase === "reflection") {
+        advanceTurn();
+      }
+    });
+  }
+
+  const hintButton = document.getElementById("hint-button");
+  if (hintButton) {
+    hintButton.addEventListener("click", () => {
+      if (!canLocalClientActOnCurrentTurn(player)) {
+        return;
+      }
+      if (isLiveMirrorClient() && !liveSession.isHost) {
+        sendLivePlayerAction({ type: "hint" });
+        return;
+      }
+      performHintAction();
+    });
+  }
+
+}
+
+function renderGoalPanel() {
+  if (!state.players.length) {
+    elements.goalPanel.innerHTML = `
+      <div class="panel-heading"><h2>Roadmap</h2></div>
+      <p class="turn-status">The game tracks credit, savings, housing, mobility, growth, and debt control.</p>
+    `;
+    return;
+  }
+
+  const player = getCurrentPlayer();
+  const goals = getGoalProgress(player);
+
+  elements.goalPanel.innerHTML = `
+    <div class="panel-heading">
+      <h2>${player.name}'s Roadmap</h2>
+      <span class="turn-pill">${countCompletedGoals(player)} / ${goals.length}</span>
+    </div>
+    <div class="roadmap-line">
+      ${goals
+        .map(
+          (goal, index) => `
+            <div class="roadmap-step ${goal.complete ? "complete" : ""}">
+              <div class="roadmap-track">
+                <span class="roadmap-marker">${index + 1}</span>
+              </div>
+              <div class="roadmap-copy">
+                <strong>${goal.title}</strong>
+                <span>${goal.complete ? "Complete" : truncateText(goal.detail, 62)}</span>
+              </div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPlayersPanel() {
+  if (!state.players.length) {
+    elements.playersPanel.innerHTML = `
+      <div class="panel-heading"><h2>Players</h2></div>
+      <p class="turn-status">Each rival gets a different starting background and income path.</p>
+    `;
+    return;
+  }
+
+  elements.playersPanel.innerHTML = `
+    <div class="panel-heading">
+      <h2>Players</h2>
+    </div>
+    <div class="player-grid">
+      ${state.players
+        .map((player, index) => {
+          const scoreBand = getScoreBand(player);
+          const missionTags = player.missions.length
+            ? `
+                <span class="tag">Mission: ${player.missions[0].title}</span>
+                ${player.missions.length > 1 ? `<span class="tag">+${player.missions.length - 1} more</span>` : ""}
+              `
+            : "";
+          return `
+            <div class="player-card ${index === state.currentPlayerIndex ? "active" : ""}">
+              <div class="player-card-header">
+                <div class="player-name-row">
+                  <span class="player-swatch" style="background:${player.color};"></span>
+                  <div>
+                    <h3>${player.name}${player.isAI ? " (AI)" : ""}</h3>
+                    <p>${player.background.name} • ${player.career.name}</p>
+                  </div>
+                </div>
+                <span class="turn-pill" style="background:${scoreBand.color}18;color:${scoreBand.color};border-color:${scoreBand.color}55;">
+                  ${player.creditScore}
+                </span>
+              </div>
+
+              <div class="player-summary">
+                <span><strong>${formatMoney(player.cash)}</strong> cash</span>
+                <span><strong>${formatMoney(player.emergencyFund)}</strong> emergency</span>
+                <span><strong>${formatMoney(getTotalDebt(player))}</strong> debt</span>
+                <span><strong>${countCompletedGoals(player)} / 6</strong> goals</span>
+              </div>
+
+              <div class="player-tags">
+                <span class="tag">${player.housing ? player.housing.name : "No Housing"}</span>
+                <span class="tag">${player.transport ? player.transport.name : "No Transport"}</span>
+                <span class="tag">${player.growthAsset ? player.growthAsset.name : "No Growth Asset"}</span>
+                <span class="tag">Autopay: ${player.autopayMode}</span>
+                ${player.doubleRollUnlocked ? '<span class="tag">Roll x2</span>' : ""}
+                ${player.reflectionModeActive ? '<span class="tag">Reflection</span>' : ""}
+                ${missionTags}
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderBoardFeed() {
+  const latest = state.log[0];
+
+  elements.eventSpotlight.innerHTML = latest
+    ? `
+        <h3>${latest.title}</h3>
+        <p>${truncateText(latest.body, 175)}</p>
+      `
+    : `
+        <h3>Welcome to Credit Climb</h3>
+        <p>Roll to start the game. The latest table-wide update will appear here.</p>
+      `;
+
+  elements.eventFeed.innerHTML = state.log
+    .slice(1, 4)
+    .map(
+      (entry) => `
+        <div class="event-entry">
+          <strong>${entry.title}</strong>
+          <span>${truncateText(entry.body, 120)}</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function getCreditFlashMarkup(feedback, wrapperClass = "", dismissible = false, helperText = "") {
+  if (!feedback) {
+    return "";
+  }
+
+  const icon =
+    feedback.direction === "up"
+      ? "↑"
+      : feedback.direction === "down"
+        ? "↓"
+        : "•";
+  const wrapperClasses = [wrapperClass, feedback.direction].filter(Boolean).join(" ");
+  const cardTag = dismissible ? "button" : "div";
+  const dismissAttributes = dismissible ? ' type="button" data-credit-flash-dismiss="true"' : "";
+  const helperCopy = helperText ? `<span class="credit-flash-hint">${helperText}</span>` : "";
+  return `
+    <div class="${wrapperClasses}">
+      <${cardTag} class="credit-flash-card"${dismissAttributes}>
+        <div class="credit-flash-icon-wrap">
+          <div class="credit-flash-icon" aria-hidden="true">${icon}</div>
+          <strong class="credit-flash-points">${feedback.pointsLabel}</strong>
+        </div>
+        <div class="credit-flash-copy">
+          <strong>${feedback.title}</strong>
+          <span>${feedback.body}</span>
+          ${helperCopy}
+        </div>
+      </${cardTag}>
+    </div>
+  `;
+}
+
+function completeModalDecisionAfterFlash() {
+  if (!state.modal || state.modal.mode !== "decision") {
+    clearCreditFlash();
+    renderAll();
+    return;
+  }
+
+  if (!state.modal.pendingOption) {
+    clearCreditFlash();
+    renderAll();
+    return;
+  }
+
+  const { resolve, pendingOption } = state.modal;
+  clearCreditFlash();
+  state.modal.pendingOption = null;
+  state.modal = null;
+  renderAll();
+  resolve(pendingOption);
+}
+
+function dismissCurrentNotice() {
+  if (!state.modal || state.modal.mode !== "notice") {
+    return;
+  }
+
+  const resolver = state.modal.resolve;
+  state.modal = null;
+  renderAll();
+  if (typeof resolver === "function") {
+    resolver();
+  }
+}
+
+function selectDecisionOptionByIndex(optionIndex) {
+  if (!state.modal || state.modal.mode !== "decision" || state.creditFlash) {
+    return;
+  }
+
+  const option = state.modal.decision.options[optionIndex];
+  if (!option) {
+    return;
+  }
+
+  const player = state.players.find((candidate) => candidate.id === state.modal.playerId);
+  const creditFeedback = applyDecisionChoice(player, state.modal.decision, option);
+  if (player && !player.isAI) {
+    state.modal.pendingOption = option;
+    showCreditFlash(creditFeedback);
+    return;
+  }
+
+  const resolver = state.modal.resolve;
+  state.modal = null;
+  renderAll();
+  if (typeof resolver === "function") {
+    resolver(option);
+  }
+}
+
+function performHintAction() {
+  const player = getCurrentPlayer();
+  if (!player) {
+    return;
+  }
+
+  const goals = getGoalProgress(player);
+  const firstGap = goals.find((goal) => !goal.complete);
+  if (firstGap) {
+    logEvent(
+      player.reflectionModeActive ? "Financial Advisor" : "Hint",
+      `${player.name}'s best next step is ${firstGap.title.toLowerCase()}: ${firstGap.detail}.${player.reflectionModeActive ? " The advisor recommends choosing the safer option that protects score, savings, or payment history." : ""}`
+    );
+  } else {
+    logEvent("Hint", `${player.name} has every requirement lined up for Financial Freedom.`);
+  }
+  renderAll();
+}
+
+function renderModal() {
+  if (!state.modal) {
+    elements.modalShell.classList.add("hidden");
+    elements.modalShell.setAttribute("aria-hidden", "true");
+    elements.modalCard.innerHTML = "";
+    return;
+  }
+
+  const modalPlayerName = getPlayerNameById(state.modal.playerId);
+  const canActOnModal = canLocalClientActOnModal();
+  const waitingCopy =
+    isInLiveRoom() && !canActOnModal
+      ? `<p class="turn-inline-note">Waiting for ${modalPlayerName}${liveSession.isHost ? "" : " or the host"} to respond.</p>`
+      : "";
+
+  if (state.modal.mode === "notice") {
+    const { notice } = state.modal;
+    const art = getDecisionArt(notice);
+    elements.modalShell.classList.remove("hidden");
+    elements.modalShell.setAttribute("aria-hidden", "false");
+    elements.modalCard.innerHTML = `
+      <div
+        class="modal-hero"
+        style="--modal-art-start:${art.start};--modal-art-end:${art.end};--modal-art-panel:${art.panel};"
+      >
+        <div class="modal-copy">
+          <p class="modal-kicker">${art.label}</p>
+          <h2>${notice.title}</h2>
+          <p>${notice.body}</p>
+        </div>
+        <div class="modal-art">
+          ${art.svg}
+        </div>
+      </div>
+      ${waitingCopy}
+      <div class="option-grid modal-actions">
+        <button class="option-button notice-button" type="button" data-notice-dismiss="true" ${canActOnModal ? "" : "disabled"}>
+          <strong>${notice.buttonLabel || "Continue"}</strong>
+          <span>${canActOnModal ? "Keep the climb moving." : "Another player is handling this moment."}</span>
+        </button>
+      </div>
+    `;
+
+    const dismissButton = elements.modalCard.querySelector("[data-notice-dismiss]");
+    if (dismissButton) {
+      dismissButton.addEventListener("click", () => {
+        if (!state.modal || !canLocalClientActOnModal()) {
+          return;
+        }
+        if (isLiveMirrorClient()) {
+          sendLivePlayerAction({ type: "dismiss-notice" });
+          return;
+        }
+        dismissCurrentNotice();
+      });
+    }
+    return;
+  }
+
+  const { decision } = state.modal;
+  const art = getDecisionArt(decision);
+  const inlineCreditFlash = state.creditFlash
+    ? getCreditFlashMarkup(state.creditFlash, "modal-credit-flash", true, "Click to continue")
+    : "";
+  elements.modalShell.classList.remove("hidden");
+  elements.modalShell.setAttribute("aria-hidden", "false");
+  elements.modalCard.innerHTML = `
+    <div
+      class="modal-hero"
+      style="--modal-art-start:${art.start};--modal-art-end:${art.end};--modal-art-panel:${art.panel};"
+    >
+      <div class="modal-copy">
+        <p class="modal-kicker">${art.label}</p>
+        <h2>${decision.title}</h2>
+        <p>${decision.body}</p>
+      </div>
+      <div class="modal-art">
+        ${art.svg}
+      </div>
+    </div>
+    ${waitingCopy}
+    ${inlineCreditFlash}
+    <div class="option-grid ${state.creditFlash ? "flash-lock" : ""}">
+      ${decision.options
+        .map(
+          (option, index) => `
+            <button class="option-button" type="button" data-option-index="${index}" ${state.creditFlash || !canActOnModal ? "disabled" : ""}>
+              <strong>${option.label}</strong>
+              <span>${option.description}</span>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+
+  elements.modalCard.querySelectorAll("[data-option-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!state.modal || state.creditFlash || !canLocalClientActOnModal()) {
+        return;
+      }
+      const optionIndex = Number(button.getAttribute("data-option-index"));
+      if (isLiveMirrorClient()) {
+        sendLivePlayerAction({ type: "decision-choice", optionIndex });
+        return;
+      }
+      selectDecisionOptionByIndex(optionIndex);
+    });
+  });
+
+  const dismissFlashButton = elements.modalCard.querySelector("[data-credit-flash-dismiss]");
+  if (dismissFlashButton) {
+    dismissFlashButton.addEventListener("click", () => {
+      if (!canLocalClientActOnModal()) {
+        return;
+      }
+      if (isLiveMirrorClient()) {
+        sendLivePlayerAction({ type: "decision-flash-dismiss" });
+        return;
+      }
+      completeModalDecisionAfterFlash();
+    });
+  }
+}
+
+function renderCreditFlash() {
+  if (!elements.creditFlash) {
+    return;
+  }
+
+  if (!state.creditFlash || state.modal) {
+    elements.creditFlash.className = "credit-flash";
+    elements.creditFlash.innerHTML = "";
+    return;
+  }
+  elements.creditFlash.className = `credit-flash show ${state.creditFlash.direction}`;
+  elements.creditFlash.innerHTML = getCreditFlashMarkup(state.creditFlash, "", false);
+}
+
+function renderAll() {
+  renderLiveRoomPanel();
+  renderHeroStats();
+  renderBoard();
+  renderBoardFeed();
+  renderTurnPanel();
+  renderGoalPanel();
+  renderPlayersPanel();
+  renderModal();
+  renderCreditFlash();
+  broadcastLiveSnapshot();
+}
+
+function handleSetupSubmit(event) {
+  event.preventDefault();
+  if (isInLiveRoom()) {
+    if (liveSession.isHost) {
+      startLiveRoomGame();
+    }
+    return;
+  }
+  startGame(getHumanNamesFromForm(), getConfiguredAiCount());
+}
+
+function renderExtraHumanFields() {
+  if (isInLiveRoom()) {
+    elements.extraHumanFields.innerHTML = "";
+    return;
+  }
+  const humanCount = Number(elements.humanCount.value);
+  elements.extraHumanFields.innerHTML = Array.from(
+    { length: Math.max(0, humanCount - 1) },
+    (_, index) => {
+      const playerNumber = index + 2;
+      return `
+        <label>
+          Player ${playerNumber} name
+          <input id="player-name-${playerNumber}" type="text" maxlength="18" value="Player ${playerNumber}" />
+        </label>
+      `;
+    }
+  ).join("");
+}
+
+function getConfiguredAiCount() {
+  const humanCount = isInLiveRoom() ? getLiveHumanMembers().length : Number(elements.humanCount.value);
+  const requestedAiCount = Number(elements.aiCount.value);
+  const maxAiCount = Math.max(0, 4 - humanCount);
+  const aiCount = Math.min(requestedAiCount, maxAiCount);
+  elements.aiCount.value = String(aiCount);
+  return aiCount;
+}
+
+function getHumanNamesFromForm() {
+  if (isInLiveRoom()) {
+    return getLiveHumanMembers().map((member) => member.name);
+  }
+
+  const humanCount = Number(elements.humanCount.value);
+  const names = [elements.playerName.value.trim() || "You"];
+
+  for (let index = 2; index <= humanCount; index += 1) {
+    const input = document.getElementById(`player-name-${index}`);
+    names.push(input && input.value.trim() ? input.value.trim() : `Player ${index}`);
+  }
+
+  return names;
+}
+
+function initialize() {
+  ensureBackgroundMusic();
+  window.addEventListener("error", (event) => {
+    if (!event.error) {
+      return;
+    }
+    recoverFromTurnError("runtime error", event.error);
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    recoverFromTurnError("unhandled promise", event.reason);
+  });
+  document.addEventListener("pointerdown", primeBackgroundMusic);
+  document.addEventListener("keydown", primeBackgroundMusic);
+  renderExtraHumanFields();
+  refreshMusicControls();
+  elements.setupForm.addEventListener("submit", handleSetupSubmit);
+  elements.createRoomButton.addEventListener("click", () => {
+    void createLiveRoom();
+  });
+  elements.joinRoomButton.addEventListener("click", () => {
+    void joinLiveRoom();
+  });
+  elements.leaveRoomButton.addEventListener("click", () => {
+    leaveLiveRoom();
+  });
+  elements.roomCode.addEventListener("input", () => {
+    elements.roomCode.value = elements.roomCode.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
+  });
+  elements.humanCount.addEventListener("change", () => {
+    renderExtraHumanFields();
+    getConfiguredAiCount();
+  });
+  elements.aiCount.addEventListener("change", () => {
+    getConfiguredAiCount();
+  });
+  elements.newGameButton.addEventListener("click", () => {
+    if (isInLiveRoom()) {
+      if (liveSession.isHost) {
+        startLiveRoomGame();
+      }
+      return;
+    }
+    startGame(getHumanNamesFromForm(), getConfiguredAiCount());
+  });
+  elements.musicButton.addEventListener("click", () => {
+    handleMusicToggle();
+  });
+  const queryRoomCode = getRoomCodeFromQuery();
+  if (queryRoomCode) {
+    elements.roomCode.value = queryRoomCode;
+    setLiveStatus(`Invite link detected for room ${queryRoomCode}. Enter your name, then join the room.`);
+    clearGameState();
+    renderAll();
+    return;
+  }
+
+  renderLiveRoomPanel();
+  startGame(getHumanNamesFromForm(), getConfiguredAiCount());
+}
+
+initialize();

@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: credit-climb-live
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
