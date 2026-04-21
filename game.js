@@ -1420,6 +1420,15 @@ function refreshMusicControls() {
   if (musicNote) {
     musicNote.textContent = getMusicStatusText();
   }
+
+  const toolbarMusic = document.getElementById("toolbar-music");
+  if (toolbarMusic) {
+    toolbarMusic.disabled = musicState.available === false;
+    toolbarMusic.setAttribute("aria-pressed", musicState.started ? "true" : "false");
+    toolbarMusic.classList.toggle("active", Boolean(musicState.started));
+    toolbarMusic.setAttribute("title", musicState.started ? "Mute music" : "Play music");
+    toolbarMusic.setAttribute("aria-label", musicState.started ? "Mute music" : "Play music");
+  }
 }
 
 function ensureBackgroundMusic() {
@@ -4336,9 +4345,7 @@ function getInitials(name) {
 
 function renderHeroStats() {
   const leader = getLeader();
-  const bestCredit = state.players.length
-    ? state.players.reduce((highest, player) => (player.creditScore > highest.creditScore ? player : highest), state.players[0])
-    : null;
+  const leaderScore = leader ? getCompositeScore(leader).totalDisplay : null;
 
   elements.heroStats.innerHTML = `
     <div class="hero-stat-card">
@@ -4347,11 +4354,7 @@ function renderHeroStats() {
     </div>
     <div class="hero-stat-card">
       <span class="hero-stat-label">Leader</span>
-      <span class="hero-stat-value">${leader ? leader.name : "None"}</span>
-    </div>
-    <div class="hero-stat-card">
-      <span class="hero-stat-label">Best Credit</span>
-      <span class="hero-stat-value">${bestCredit ? bestCredit.creditScore : "--"}</span>
+      <span class="hero-stat-value">${leader ? leader.name : "None"}${leader ? ` · ${leaderScore}` : ""}</span>
     </div>
   `;
 }
@@ -4371,7 +4374,7 @@ function renderBoard() {
         <div>
           <span class="space-badge">${space.badge}</span>
           <h3 class="space-name">${space.name}</h3>
-          <p class="space-brief">${space.blurb}</p>
+          ${active ? `<p class="space-brief">${space.blurb}</p>` : ""}
         </div>
         <div class="space-footer">
           <span class="space-index">${String(index + 1).padStart(2, "0")}</span>
@@ -4528,10 +4531,6 @@ function renderTurnPanel() {
         <span>Stage</span>
         <strong>${getLifeStage(player)}</strong>
       </div>
-      <div class="turn-stat-pill">
-        <span>Die</span>
-        <strong>${state.lastDie ?? "--"}</strong>
-      </div>
     </div>
     ${renderWellbeingBar(player)}
     ${renderFreedomProgress(player)}
@@ -4638,51 +4637,46 @@ function renderPlayersPanel() {
     return;
   }
 
+  const opponents = state.players
+    .map((player, index) => ({ player, index }))
+    .filter(({ index }) => index !== state.currentPlayerIndex);
+
+  if (!opponents.length) {
+    elements.playersPanel.innerHTML = `
+      <div class="panel-heading"><h2>Opponents</h2></div>
+      <p class="turn-status">Solo run — the board is yours.</p>
+    `;
+    return;
+  }
+
   elements.playersPanel.innerHTML = `
     <div class="panel-heading">
-      <h2>Players</h2>
+      <h2>Opponents</h2>
     </div>
     <div class="player-grid">
-      ${state.players
-        .map((player, index) => {
+      ${opponents
+        .map(({ player }) => {
           const scoreBand = getScoreBand(player);
-          const missionTags = player.missions.length
-            ? `
-                <span class="tag">Mission: ${player.missions[0].title}</span>
-                ${player.missions.length > 1 ? `<span class="tag">+${player.missions.length - 1} more</span>` : ""}
-              `
-            : "";
+          const tier = getWellbeingTier(player.wellbeing);
+          const composite = getCompositeScore(player).totalDisplay;
           return `
-            <div class="player-card ${index === state.currentPlayerIndex ? "active" : ""}">
+            <div class="player-card compact">
               <div class="player-card-header">
                 <div class="player-name-row">
                   <span class="player-swatch" style="background:${player.color};"></span>
                   <div>
-                    <h3>${player.name}${player.isAI ? " (AI)" : ""}</h3>
-                    <p>${player.background.name} • ${player.career.name}</p>
+                    <h3>${player.name}${player.isAI ? '<span class="ai-chip">AI</span>' : ""}</h3>
                   </div>
                 </div>
-                <span class="turn-pill" style="background:${scoreBand.color}18;color:${scoreBand.color};border-color:${scoreBand.color}55;">
+                <span class="player-credit-big" style="color:${scoreBand.color};">
                   ${player.creditScore}
                 </span>
               </div>
 
-              <div class="player-summary">
-                <span><strong>${formatMoney(player.cash)}</strong> cash</span>
-                <span><strong>${formatMoney(player.emergencyFund)}</strong> emergency</span>
-                <span><strong>${formatMoney(getTotalDebt(player))}</strong> debt</span>
-                <span><strong>${countCompletedGoals(player)} / 6</strong> goals</span>
-                <span class="player-summary-wellbeing wellbeing-tier-${getWellbeingTier(player.wellbeing).key}"><strong>${Math.round(player.wellbeing)}</strong> ${getWellbeingTier(player.wellbeing).label}</span>
-              </div>
-
-              <div class="player-tags">
-                <span class="tag">${player.housing ? player.housing.name : "No Housing"}</span>
-                <span class="tag">${player.transport ? player.transport.name : "No Transport"}</span>
-                <span class="tag">${player.growthAsset ? player.growthAsset.name : "No Growth Asset"}</span>
-                <span class="tag">Autopay: ${player.autopayMode}</span>
-                ${player.doubleRollUnlocked ? '<span class="tag">Roll x2</span>' : ""}
-                ${player.reflectionModeActive ? '<span class="tag">Reflection</span>' : ""}
-                ${missionTags}
+              <div class="player-summary compact-summary">
+                <span class="player-summary-wellbeing wellbeing-tier-${tier.key}"><strong>${Math.round(player.wellbeing)}</strong> ${tier.label}</span>
+                <span><strong>${composite}</strong> freedom</span>
+                <span><strong>${countCompletedGoals(player)}&nbsp;/&nbsp;6</strong> goals</span>
               </div>
             </div>
           `;
@@ -5080,6 +5074,7 @@ function renderCreditFlash() {
 }
 
 function renderAll() {
+  renderBodyPhaseClass();
   renderLiveRoomPanel();
   renderHeroStats();
   renderBoard();
@@ -5087,9 +5082,63 @@ function renderAll() {
   renderTurnPanel();
   renderGoalPanel();
   renderPlayersPanel();
+  renderInGameToolbar();
   renderModal();
   renderCreditFlash();
   broadcastLiveSnapshot();
+}
+
+function renderBodyPhaseClass() {
+  const body = document.body;
+  if (!body) return;
+  // In-game only when the game has actually started — both conditions must hold:
+  //   (1) state.players has been populated (startGame / applyNetworkSnapshot ran)
+  //   (2) state.phase is past "setup" (the lobby / pre-deal state)
+  // A live-room lobby sets liveSession.* but leaves state.players empty and
+  // state.phase === "setup", so the setup panel stays visible during Create/Join.
+  const inLiveGamePhase =
+    state.phase === "ready" ||
+    state.phase === "ai-ready" ||
+    state.phase === "rolling" ||
+    state.phase === "reflection" ||
+    state.phase === "game-over";
+  const inGame = state.players.length > 0 && inLiveGamePhase;
+  body.classList.toggle("in-game", inGame);
+  body.classList.toggle("pre-game", !inGame);
+}
+
+function returnToSetup() {
+  clearGameState();
+  renderAll();
+  if (elements.setupForm && typeof elements.setupForm.scrollIntoView === "function") {
+    elements.setupForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else if (typeof window.scrollTo === "function") {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+function renderInGameToolbar() {
+  const strip = document.getElementById("toolbar-live-strip");
+  const leaveBtn = document.getElementById("toolbar-leave-room");
+  if (strip && leaveBtn) {
+    if (isInLiveRoom()) {
+      const code = liveSession.roomCode || "";
+      const count = Array.isArray(liveSession.members) ? liveSession.members.length : state.players.length;
+      strip.hidden = false;
+      strip.textContent = `Room ${code} · ${count} player${count === 1 ? "" : "s"}`;
+      leaveBtn.hidden = false;
+    } else {
+      strip.hidden = true;
+      strip.textContent = "";
+      leaveBtn.hidden = true;
+    }
+  }
+  const musicBtn = document.getElementById("toolbar-music");
+  if (musicBtn && elements.musicButton) {
+    const pressed = elements.musicButton.getAttribute("aria-pressed") === "true";
+    musicBtn.setAttribute("aria-pressed", pressed ? "true" : "false");
+    musicBtn.classList.toggle("active", pressed);
+  }
 }
 
 function handleSetupSubmit(event) {
@@ -5184,17 +5233,47 @@ function initialize() {
     getConfiguredAiCount();
   });
   elements.newGameButton.addEventListener("click", () => {
+    // Live-room host: "Restart Room" still means "start a fresh live game from the lobby".
     if (isInLiveRoom()) {
       if (liveSession.isHost) {
         startLiveRoomGame();
       }
       return;
     }
-    startGame(getHumanNamesFromForm(), getConfiguredAiCount());
+    // Hot-seat: return to the setup screen so the player can change settings or profiles.
+    returnToSetup();
   });
   elements.musicButton.addEventListener("click", () => {
     handleMusicToggle();
   });
+
+  const toolbarRestart = document.getElementById("toolbar-restart");
+  if (toolbarRestart) {
+    toolbarRestart.addEventListener("click", () => {
+      // In-game Restart: always return to setup so the player sees the full
+      // pre-game screen (profile picker, rules, etc.) — mirrors what they'd
+      // see on a fresh page load.
+      if (isInLiveRoom() && !liveSession.isHost) {
+        // Non-host live clients can't unilaterally end the game; just refresh locally.
+        renderAll();
+        return;
+      }
+      returnToSetup();
+    });
+  }
+  const toolbarMusic = document.getElementById("toolbar-music");
+  if (toolbarMusic) {
+    toolbarMusic.addEventListener("click", () => {
+      handleMusicToggle();
+    });
+  }
+  const toolbarLeave = document.getElementById("toolbar-leave-room");
+  if (toolbarLeave) {
+    toolbarLeave.addEventListener("click", () => {
+      leaveLiveRoom();
+    });
+  }
+
   const queryRoomCode = getRoomCodeFromQuery();
   if (queryRoomCode) {
     elements.roomCode.value = queryRoomCode;
@@ -5204,8 +5283,10 @@ function initialize() {
     return;
   }
 
+  // Show setup screen on fresh load. The user starts the game via "Deal the Board".
+  clearGameState();
   renderLiveRoomPanel();
-  startGame(getHumanNamesFromForm(), getConfiguredAiCount());
+  renderAll();
 }
 
 initialize();

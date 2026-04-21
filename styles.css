@@ -1911,3 +1911,242 @@ button.credit-flash-card {
   justify-content: flex-end;
   margin-top: 18px;
 }
+
+/* ============================================================
+   Phase A — Clutter reduction & visual hierarchy
+   ============================================================ */
+
+/* Pre-game vs in-game visibility toggles */
+body.in-game .pre-game-only {
+  display: none !important;
+}
+body.pre-game .in-game-only {
+  display: none !important;
+}
+
+/* Shrink the hero banner once gameplay starts */
+body.in-game .hero-banner {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  padding: 14px 20px;
+  border-radius: 22px;
+}
+body.in-game .hero-banner h1 {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1.1;
+}
+body.in-game .hero-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* In-game toolbar — compact, right-aligned */
+.in-game-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.toolbar-button {
+  border: 1px solid rgba(255, 249, 236, 0.34);
+  background: rgba(255, 249, 236, 0.14);
+  color: #fff9ec;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 140ms ease, transform 120ms ease, border-color 140ms ease;
+}
+
+.toolbar-button:hover {
+  background: rgba(255, 249, 236, 0.22);
+  border-color: rgba(255, 249, 236, 0.55);
+}
+
+.toolbar-button:active {
+  transform: translateY(1px);
+}
+
+.toolbar-icon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1rem;
+}
+
+.toolbar-icon.active {
+  background: rgba(215, 167, 61, 0.36);
+  border-color: rgba(215, 167, 61, 0.72);
+}
+
+.toolbar-live-strip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 249, 236, 0.1);
+  border: 1px solid rgba(255, 249, 236, 0.28);
+  color: #fff9ec;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Center card — remove decorative title weight, make it feel like a log header */
+.center-card .center-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(31, 43, 58, 0.6);
+  text-align: left;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(31, 43, 58, 0.12);
+}
+
+.center-card {
+  text-align: left;
+}
+
+/* Roadmap — reduce visual weight but keep all six named stages (Tuning 2) */
+body.in-game .roadmap-panel {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.42);
+}
+body.in-game .roadmap-panel .panel-heading h2 {
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(31, 43, 58, 0.62);
+}
+body.in-game .roadmap-step {
+  padding-right: 8px;
+}
+body.in-game .roadmap-marker {
+  width: 24px;
+  height: 24px;
+  font-size: 0.7rem;
+  border-width: 1.5px;
+  background: rgba(255, 255, 255, 0.58);
+}
+body.in-game .roadmap-step:not(:last-child) .roadmap-track::after {
+  height: 2px;
+}
+body.in-game .roadmap-copy strong {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: rgba(31, 43, 58, 0.72);
+}
+body.in-game .roadmap-copy span {
+  font-size: 0.64rem;
+  line-height: 1.2;
+  color: rgba(31, 43, 58, 0.5);
+  margin-top: 2px;
+}
+
+/* Players panel — compact opponent cards */
+.player-card.compact {
+  padding: 10px 12px;
+  gap: 6px;
+}
+.player-card.compact .player-card-header {
+  align-items: center;
+}
+.player-card.compact .player-name-row h3 {
+  font-size: 0.95rem;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.player-card.compact .ai-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(31, 43, 58, 0.12);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(31, 43, 58, 0.72);
+}
+.player-credit-big {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.player-card.compact .compact-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 2px;
+}
+/* Shared tile layout for all three chips — number stacked above label. */
+.player-card.compact .compact-summary > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 6px 4px;
+  border-radius: 10px;
+  font-size: 0.6rem;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  text-align: center;
+  overflow: hidden;
+}
+/* Neutral background for the non-tier tiles (freedom / goals). */
+.player-card.compact .compact-summary > span:not(.player-summary-wellbeing) {
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(31, 43, 58, 0.1);
+  color: rgba(31, 43, 58, 0.6);
+}
+/* Wellbeing tile inherits tier coloring from the tier rules below; we only
+   need to square off the pill so it matches the other tiles in the grid. */
+.player-card.compact .compact-summary .player-summary-wellbeing {
+  border-radius: 10px;
+  border-width: 1.5px;
+}
+.player-card.compact .compact-summary strong {
+  font-size: 0.95rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-transform: none;
+  font-weight: 800;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-card.compact .compact-summary .player-summary-wellbeing strong {
+  color: inherit;
+}
+
+@media (max-width: 820px) {
+  body.in-game .hero-banner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  body.in-game .hero-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .in-game-toolbar {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}

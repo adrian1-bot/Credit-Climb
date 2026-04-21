@@ -6,17 +6,17 @@
     <title>Credit Climb</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body class="pre-game">
     <div class="page-shell">
       <header class="hero-banner">
         <div class="hero-content">
-          <p class="eyebrow">Browser Board Game</p>
+          <p class="eyebrow pre-game-only">Browser Board Game</p>
           <h1>Credit Climb</h1>
-          <p class="hero-copy">
+          <p class="hero-copy pre-game-only">
             Roll through early adulthood, build your credit, unlock better
             opportunities, and reach Financial Freedom before your rivals do.
           </p>
-          <details class="rulebook-dropdown">
+          <details class="rulebook-dropdown pre-game-only">
             <summary>Rulebook and Foundations of Life</summary>
             <div class="rulebook-content">
               <div class="rulebook-block">
@@ -39,9 +39,15 @@
               </div>
             </div>
           </details>
+          <div class="in-game-toolbar in-game-only" id="in-game-toolbar">
+            <button id="toolbar-restart" class="toolbar-button" type="button">Restart</button>
+            <button id="toolbar-music" class="toolbar-button toolbar-icon" type="button" aria-pressed="false" aria-label="Toggle music" title="Toggle music">♪</button>
+            <span class="toolbar-live-strip" id="toolbar-live-strip" hidden></span>
+            <button id="toolbar-leave-room" class="toolbar-button toolbar-leave" type="button" hidden>Leave Room</button>
+          </div>
         </div>
         <div class="hero-rail">
-          <section class="hero-panel hero-setup">
+          <section class="hero-panel hero-setup pre-game-only">
             <div class="panel-heading">
               <h2>New Game</h2>
               <button id="new-game-button" class="secondary-button" type="button">
@@ -115,12 +121,7 @@
             <div class="board-grid" id="board"></div>
             <div class="board-center">
               <div class="center-card">
-                <p class="center-kicker">Center Feed</p>
-                <h2>Table Talk</h2>
-                <p class="center-copy">
-                  The latest landing, decision, and setback shows up here so
-                  everyone at the table can follow what just happened.
-                </p>
+                <h2 class="center-title">Table Talk</h2>
                 <div class="event-spotlight" id="event-spotlight"></div>
                 <div class="event-feed" id="event-feed"></div>
               </div>
