@@ -1677,3 +1677,237 @@ button.credit-flash-card {
     box-shadow: 0 0 0 3px rgba(176, 74, 47, 0.22);
   }
 }
+
+/* ----- Freedom Progress ----- */
+
+.freedom-progress {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 2px solid rgba(31, 43, 58, 0.14);
+  background: rgba(31, 43, 58, 0.04);
+}
+
+.freedom-progress.freedom-tier-low {
+  border-color: rgba(196, 123, 47, 0.32);
+  background: linear-gradient(180deg, rgba(220, 160, 86, 0.1), rgba(196, 123, 47, 0.04));
+}
+
+.freedom-progress.freedom-tier-mid {
+  border-color: rgba(95, 143, 61, 0.34);
+  background: linear-gradient(180deg, rgba(137, 187, 108, 0.1), rgba(95, 143, 61, 0.04));
+}
+
+.freedom-progress.freedom-tier-high {
+  border-color: rgba(45, 125, 125, 0.42);
+  background: linear-gradient(180deg, rgba(96, 175, 175, 0.12), rgba(45, 125, 125, 0.06));
+}
+
+.freedom-progress.freedom-ready {
+  border-color: rgba(215, 167, 61, 0.74);
+  box-shadow: 0 6px 14px rgba(215, 167, 61, 0.18);
+}
+
+.freedom-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.freedom-progress-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.freedom-progress-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--ink);
+}
+
+.freedom-progress-score strong {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.freedom-progress-score span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.freedom-progress-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(31, 43, 58, 0.12);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(31, 43, 58, 0.16);
+}
+
+.freedom-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 500ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.freedom-progress.freedom-tier-low .freedom-progress-fill {
+  background: linear-gradient(90deg, #c47b2f, #e3a25c);
+}
+
+.freedom-progress.freedom-tier-mid .freedom-progress-fill {
+  background: linear-gradient(90deg, #5f8f3d, #88bb6c);
+}
+
+.freedom-progress.freedom-tier-high .freedom-progress-fill {
+  background: linear-gradient(90deg, #2d7d7d, #5fafaf);
+}
+
+.freedom-progress-chips {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.freedom-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1.5px solid rgba(31, 43, 58, 0.14);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--muted);
+}
+
+.freedom-chip.met {
+  color: #1f4f2d;
+  background: rgba(137, 187, 108, 0.25);
+  border-color: rgba(95, 143, 61, 0.45);
+}
+
+.freedom-chip.unmet {
+  color: var(--muted);
+}
+
+.freedom-chip-mark {
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.freedom-chip.met .freedom-chip-mark {
+  color: #3d6f22;
+}
+
+.freedom-chip.unmet .freedom-chip-mark {
+  color: rgba(31, 43, 58, 0.42);
+}
+
+/* ----- End-game modal ----- */
+
+.endgame-modal .modal-card {
+  width: min(640px, 100%);
+  padding: 24px;
+}
+
+.endgame-header {
+  margin-bottom: 16px;
+}
+
+.endgame-header-kicker {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(31, 43, 58, 0.08);
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.endgame-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+}
+
+.endgame-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.endgame-table {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.endgame-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 2px solid rgba(31, 43, 58, 0.12);
+}
+
+.endgame-table th.num,
+.endgame-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.endgame-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(31, 43, 58, 0.08);
+}
+
+.endgame-table tr.winner-row td {
+  background: rgba(215, 167, 61, 0.14);
+  font-weight: 800;
+}
+
+.endgame-table .endgame-rank {
+  width: 1.8rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.endgame-table .endgame-score {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.endgame-player-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.endgame-player-name .player-swatch {
+  width: 14px;
+  height: 14px;
+}
+
+.endgame-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}

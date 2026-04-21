@@ -582,6 +582,7 @@ const state = {
   pendingNotices: [],
   busy: false,
   winnerId: null,
+  endingType: null,
   creditFlash: null,
   recoveringError: false,
 };
@@ -779,6 +780,7 @@ function clearGameState() {
   state.pendingNotices = [];
   state.busy = false;
   state.winnerId = null;
+  state.endingType = null;
   clearCreditFlash();
 }
 
@@ -845,6 +847,7 @@ function buildNetworkSnapshot() {
     modal: sanitizeModalForNetwork(state.modal),
     busy: state.busy,
     winnerId: state.winnerId,
+    endingType: state.endingType,
     creditFlash: state.creditFlash,
   };
 }
@@ -865,6 +868,7 @@ function applyNetworkSnapshot(snapshot) {
   state.pendingNotices = [];
   state.busy = Boolean(snapshot.busy);
   state.winnerId = snapshot.winnerId || null;
+  state.endingType = snapshot.endingType || null;
   state.creditFlash = snapshot.creditFlash || null;
   liveSession.pendingRemoteAction = false;
   renderAll();
@@ -1672,6 +1676,101 @@ function getSavings(player) {
   return Math.round(player.cash + player.emergencyFund);
 }
 
+function getNetWorth(player) {
+  return Math.round(player.cash + player.emergencyFund - getTotalDebt(player));
+}
+
+function getDebtCeilingForFreedom(player) {
+  // Project spec: ≤ $500, OR ≤ 25% of starting debt — use the more lenient threshold
+  // so profiles with high starting debt aren't locked out of Financial Freedom.
+  const starting = player.startingDebt || 0;
+  const twentyFivePercent = Math.floor(starting * 0.25);
+  return Math.max(500, twentyFivePercent);
+}
+
+function reachedFinancialFreedom(player) {
+  if (!player) {
+    return false;
+  }
+  const debtCeiling = getDebtCeilingForFreedom(player);
+  return (
+    player.creditScore >= 720 &&
+    Boolean(player.housing) &&
+    player.emergencyFund >= 1500 &&
+    getTotalDebt(player) <= debtCeiling
+  );
+}
+
+const TURN_CAP = 15;
+
+function getCompositeScore(player) {
+  if (!player) {
+    return { total: 0, credit: 0, netWorth: 0, milestones: 0, emergency: 0, wellbeingBonus: 0 };
+  }
+  const creditComponent = clamp((player.creditScore - 300) / 5.5, 0, 100);
+
+  const netDelta = getNetWorth(player) - (player.startingNetWorth || 0);
+  // Progress-anchored: -$3k delta → 0, +$10k delta → 100.
+  const netWorthComponent = clamp((netDelta + 3000) / 130, 0, 100);
+
+  const completedGoals = countCompletedGoals(player);
+  const milestonesComponent = clamp((completedGoals / 6) * 100, 0, 100);
+
+  const emergencyComponent = clamp((player.emergencyFund / 1500) * 100, 0, 100);
+
+  const tier = getWellbeingTier(player.wellbeing).key;
+  const wellbeingBonus = tier === "flowing" ? 10 : tier === "stressed" ? -10 : 0;
+
+  const weighted =
+    creditComponent * 0.35 +
+    netWorthComponent * 0.25 +
+    milestonesComponent * 0.2 +
+    emergencyComponent * 0.1 +
+    wellbeingBonus;
+
+  return {
+    total: Math.round(weighted),
+    totalDisplay: Math.max(0, Math.min(100, Math.round(weighted))),
+    credit: Math.round(creditComponent),
+    netWorth: Math.round(netWorthComponent),
+    netDelta: Math.round(netDelta),
+    milestones: Math.round(milestonesComponent),
+    milestonesCount: completedGoals,
+    emergency: Math.round(emergencyComponent),
+    wellbeingBonus,
+  };
+}
+
+function getFreedomCriteria(player) {
+  const debtCeiling = getDebtCeilingForFreedom(player);
+  return [
+    {
+      key: "credit",
+      label: "Credit 720+",
+      met: player.creditScore >= 720,
+      detail: `${player.creditScore}`,
+    },
+    {
+      key: "housing",
+      label: "Stable Housing",
+      met: Boolean(player.housing),
+      detail: player.housing ? player.housing.name : "Not yet",
+    },
+    {
+      key: "emergency",
+      label: "$1,500 Emergency",
+      met: player.emergencyFund >= 1500,
+      detail: formatMoney(player.emergencyFund),
+    },
+    {
+      key: "debt",
+      label: `Debt ≤ ${formatMoney(debtCeiling)}`,
+      met: getTotalDebt(player) <= debtCeiling,
+      detail: formatMoney(getTotalDebt(player)),
+    },
+  ];
+}
+
 function getUtilization(player) {
   if (player.creditLimit <= 0) {
     return 0;
@@ -1791,6 +1890,10 @@ function makePlayer(name, color, background, career, isAI) {
     burnoutActiveSpell: false,
     lastWellbeingDelta: 0,
     lastWellbeingReason: null,
+    startingDebt: Math.round(background.cardBalance + background.loanBalance),
+    startingNetWorth: Math.round(
+      background.cash + background.emergencyFund - (background.cardBalance + background.loanBalance)
+    ),
     turnFlags: createTurnFlags(),
   };
 }
@@ -1836,6 +1939,7 @@ function startGame(humanNames, aiCount) {
   state.pendingNotices = [];
   state.busy = false;
   state.winnerId = null;
+  state.endingType = null;
   clearCreditFlash();
 
   players.forEach((player) => {
@@ -2416,18 +2520,49 @@ function checkWinner(player) {
   if (state.winnerId) {
     return true;
   }
-  const won = getGoalProgress(player).every((goal) => goal.complete);
-  if (won) {
+  if (reachedFinancialFreedom(player)) {
     state.winnerId = player.id;
+    state.endingType = "freedom";
     state.phase = "game-over";
     logEvent(
       "Financial Freedom",
-      `${player.name} completed every milestone and reached Financial Freedom.`
+      `${player.name} reached Financial Freedom — 720+ credit, stable housing, $1,500 emergency, debt under control.`
     );
     renderAll();
+    showEndGameModal();
     return true;
   }
   return false;
+}
+
+function endGameByTurnCap() {
+  if (state.winnerId) {
+    return;
+  }
+  const ranked = [...state.players]
+    .map((player) => ({ player, score: getCompositeScore(player) }))
+    .sort((a, b) => {
+      if (b.score.total !== a.score.total) {
+        return b.score.total - a.score.total;
+      }
+      if (b.player.creditScore !== a.player.creditScore) {
+        return b.player.creditScore - a.player.creditScore;
+      }
+      return getSavings(b.player) - getSavings(a.player);
+    });
+  const winner = ranked[0];
+  if (!winner) {
+    return;
+  }
+  state.winnerId = winner.player.id;
+  state.endingType = "turn-cap";
+  state.phase = "game-over";
+  logEvent(
+    "Turn Cap Reached",
+    `After ${TURN_CAP} rounds, ${winner.player.name} finished on top with a Freedom Score of ${winner.score.totalDisplay}.`
+  );
+  renderAll();
+  showEndGameModal();
 }
 
 function getLeader() {
@@ -2435,9 +2570,9 @@ function getLeader() {
     return null;
   }
   const sorted = [...state.players].sort((left, right) => {
-    const goalGap = countCompletedGoals(right) - countCompletedGoals(left);
-    if (goalGap !== 0) {
-      return goalGap;
+    const compositeGap = getCompositeScore(right).total - getCompositeScore(left).total;
+    if (compositeGap !== 0) {
+      return compositeGap;
     }
     const scoreGap = right.creditScore - left.creditScore;
     if (scoreGap !== 0) {
@@ -4106,6 +4241,9 @@ async function handleSpace(player, space) {
   checkMissionCompletion(player);
   applyThresholdUnlocks(player);
   checkWinner(player);
+  if (state.winnerId) {
+    return;
+  }
   await maybeResolveBurnout(player);
   await flushPlayerNotices(player);
 }
@@ -4168,12 +4306,21 @@ async function runAiTurn() {
 }
 
 function advanceTurn() {
+  const wasLastPlayerInRound = state.currentPlayerIndex === state.players.length - 1;
   state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
   if (state.currentPlayerIndex === 0) {
     state.round += 1;
   }
   state.lastDie = null;
   state.lastRollNote = null;
+
+  // Turn cap: once the final player in round TURN_CAP has acted, state.round rolls to TURN_CAP + 1.
+  // End the game before starting another round.
+  if (wasLastPlayerInRound && state.round > TURN_CAP && !state.winnerId) {
+    endGameByTurnCap();
+    return;
+  }
+
   renderAll();
   void beginTurn();
 }
@@ -4196,7 +4343,7 @@ function renderHeroStats() {
   elements.heroStats.innerHTML = `
     <div class="hero-stat-card">
       <span class="hero-stat-label">Round</span>
-      <span class="hero-stat-value">${state.round}</span>
+      <span class="hero-stat-value">${Math.min(state.round, TURN_CAP)} / ${TURN_CAP}</span>
     </div>
     <div class="hero-stat-card">
       <span class="hero-stat-label">Leader</span>
@@ -4271,6 +4418,39 @@ function renderWellbeingBar(player) {
         <div class="wellbeing-bar-fill" style="width:${fillPercent}%;"></div>
       </div>
       ${deltaMarkup ? `<div class="wellbeing-bar-foot">${deltaMarkup}</div>` : ""}
+    </div>
+  `;
+}
+
+function renderFreedomProgress(player) {
+  const score = getCompositeScore(player);
+  const criteria = getFreedomCriteria(player);
+  const metCount = criteria.filter((c) => c.met).length;
+  const display = score.totalDisplay;
+  const tierClass =
+    display >= 75 ? "freedom-tier-high" : display >= 45 ? "freedom-tier-mid" : "freedom-tier-low";
+  const ffState = metCount === 4 ? "freedom-ready" : "";
+  return `
+    <div class="freedom-progress ${tierClass} ${ffState}">
+      <div class="freedom-progress-head">
+        <span class="freedom-progress-label">Freedom Progress</span>
+        <span class="freedom-progress-score"><strong>${display}</strong><span>/100</span></span>
+      </div>
+      <div class="freedom-progress-track">
+        <div class="freedom-progress-fill" style="width:${display}%;"></div>
+      </div>
+      <div class="freedom-progress-chips">
+        ${criteria
+          .map(
+            (c) => `
+              <span class="freedom-chip ${c.met ? "met" : "unmet"}" title="${c.label} — currently ${c.detail}">
+                <span class="freedom-chip-mark">${c.met ? "✓" : "○"}</span>
+                ${c.label}
+              </span>
+            `
+          )
+          .join("")}
+      </div>
     </div>
   `;
 }
@@ -4354,6 +4534,7 @@ function renderTurnPanel() {
       </div>
     </div>
     ${renderWellbeingBar(player)}
+    ${renderFreedomProgress(player)}
     ${state.lastRollNote ? `<p class="turn-inline-note">${state.lastRollNote}</p>` : ""}
     ${creditCheckNote ? `<div class="credit-check-banner ${creditCheckBadgeClass}">${creditCheckNote}</div>` : ""}
     ${thinFileNote ? `<p class="turn-inline-note">${thinFileNote}</p>` : ""}
@@ -4648,7 +4829,118 @@ function performHintAction() {
   renderAll();
 }
 
+function showEndGameModal() {
+  state.modal = { mode: "endgame", playerId: null };
+  renderModal();
+}
+
+function renderEndGameModal() {
+  const ranked = [...state.players]
+    .map((player) => ({ player, score: getCompositeScore(player) }))
+    .sort((a, b) => {
+      if (b.score.total !== a.score.total) {
+        return b.score.total - a.score.total;
+      }
+      if (b.player.creditScore !== a.player.creditScore) {
+        return b.player.creditScore - a.player.creditScore;
+      }
+      return getSavings(b.player) - getSavings(a.player);
+    });
+
+  const winner = ranked[0] && ranked[0].player;
+  const endingType = state.endingType || "turn-cap";
+  const kicker = endingType === "freedom" ? "Financial Freedom" : `Final Tally · Round ${TURN_CAP}`;
+  const headline =
+    endingType === "freedom"
+      ? `${winner.name} reached Financial Freedom`
+      : `${winner ? winner.name : "No one"} finished on top`;
+  const subhead =
+    endingType === "freedom"
+      ? "Credit 720+, stable housing, $1,500 emergency, and debt under control — all in the same turn."
+      : `After ${TURN_CAP} rounds, the highest Freedom Score wins. Composite weights: Credit 35 · Net Worth progress 25 · Milestones 20 · Emergency 10 · Wellbeing ±10.`;
+
+  const rows = ranked
+    .map((entry, index) => {
+      const p = entry.player;
+      const s = entry.score;
+      const isWinner = winner && p.id === winner.id;
+      return `
+        <tr class="${isWinner ? "winner-row" : ""}">
+          <td class="endgame-rank">${index + 1}</td>
+          <td>
+            <div class="endgame-player-name">
+              <span class="player-swatch" style="background:${p.color};"></span>
+              <div>
+                <strong>${p.name}${p.isAI ? " (AI)" : ""}</strong>
+                <div style="font-size:0.72rem;color:var(--muted);">${p.background.name}</div>
+              </div>
+            </div>
+          </td>
+          <td class="num endgame-score">${s.totalDisplay}</td>
+          <td class="num">${p.creditScore}</td>
+          <td class="num">${formatMoney(getNetWorth(p))}</td>
+          <td class="num">${s.milestonesCount}/6</td>
+          <td class="num">${formatMoney(p.emergencyFund)}</td>
+          <td class="num">${Math.round(p.wellbeing)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  elements.modalShell.classList.remove("hidden");
+  elements.modalShell.classList.add("endgame-modal");
+  elements.modalShell.setAttribute("aria-hidden", "false");
+  elements.modalCard.innerHTML = `
+    <div class="endgame-header">
+      <span class="endgame-header-kicker">${kicker}</span>
+      <h2>${headline}</h2>
+      <p>${subhead}</p>
+    </div>
+    <table class="endgame-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Player</th>
+          <th class="num">Score</th>
+          <th class="num">Credit</th>
+          <th class="num">Net Worth</th>
+          <th class="num">Miles</th>
+          <th class="num">Emerg.</th>
+          <th class="num">Well</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="endgame-footer">
+      <button class="primary-button" type="button" data-endgame-restart="true">Play Again</button>
+    </div>
+  `;
+
+  const restartButton = elements.modalCard.querySelector("[data-endgame-restart]");
+  if (restartButton) {
+    restartButton.addEventListener("click", () => {
+      elements.modalShell.classList.remove("endgame-modal");
+      state.modal = null;
+      if (isInLiveRoom()) {
+        if (liveSession.isHost) {
+          startLiveRoomGame();
+        } else {
+          renderAll();
+        }
+        return;
+      }
+      startGame(getHumanNamesFromForm(), getConfiguredAiCount());
+    });
+  }
+}
+
 function renderModal() {
+  if (state.modal && state.modal.mode === "endgame") {
+    renderEndGameModal();
+    return;
+  }
+  // Clear endgame-modal class if set from a prior game
+  elements.modalShell.classList.remove("endgame-modal");
   if (!state.modal) {
     elements.modalShell.classList.add("hidden");
     elements.modalShell.setAttribute("aria-hidden", "true");
