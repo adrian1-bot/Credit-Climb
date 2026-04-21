@@ -406,7 +406,12 @@ h3 {
 }
 
 .center-card {
-  height: 100%;
+  /* Shrink-wrap to content instead of filling board-center. When the log
+     is short (first turn, only a few entries), the card no longer looks
+     oversized. max-height keeps it capped so a very long feed stays
+     inside the board perimeter. */
+  height: auto;
+  max-height: 100%;
   border-radius: 28px;
   border: var(--border);
   background:
@@ -534,12 +539,13 @@ h3 {
 
 .space-name {
   margin: 8px 0 4px;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   line-height: 1.15;
   font-weight: 700;
-  overflow-wrap: break-word;
-  word-break: normal;
-  hyphens: auto;
+  /* No hyphens/break-word: let words wrap only at spaces. The two
+     previously-too-long labels ("Emergency Fund", "Neighborhood Upgrade")
+     were renamed to "Safety Net" and "Upgrade Home" so the widest label
+     now fits comfortably without mid-word breaks. */
 }
 
 /* Legacy class — .space-brief no longer rendered on tiles; active-space
