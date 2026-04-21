@@ -783,6 +783,7 @@ function clearGameState() {
   state.endingType = null;
   clearCreditFlash();
   resetDiceTheater();
+  resetUiFeedbackState();
 }
 
 function serializeMissionForNetwork(mission) {
@@ -1930,8 +1931,29 @@ function createTurnFlags() {
   };
 }
 
+// One-shot UI feedback snapshots for delta-driven animations (credit
+// pulse, wellbeing pulse, newly-met chips, Table Talk just-arrived
+// highlight). Not part of `state` because these are ephemeral rendering
+// concerns, not game logic, and shouldn't be serialized across live
+// sessions. Snapshot maps are keyed by player.id so each player tracks
+// their own last-seen values.
+let logEventIdCounter = 0;
+const uiFeedback = {
+  lastCreditByPlayer: new Map(),
+  lastWellbeingByPlayer: new Map(),
+  lastMetChipsByPlayer: new Map(),
+  lastTopLogId: 0,
+};
+
+function resetUiFeedbackState() {
+  uiFeedback.lastCreditByPlayer.clear();
+  uiFeedback.lastWellbeingByPlayer.clear();
+  uiFeedback.lastMetChipsByPlayer.clear();
+  uiFeedback.lastTopLogId = 0;
+}
+
 function logEvent(title, body, kind = "play") {
-  state.log.unshift({ title, body, kind });
+  state.log.unshift({ id: ++logEventIdCounter, title, body, kind });
   state.log = state.log.slice(0, 40);
 }
 
@@ -4497,7 +4519,7 @@ function renderBoard() {
   }).join("");
 }
 
-function renderWellbeingBar(player) {
+function renderWellbeingBar(player, pulseClass = "") {
   const value = Math.round(player.wellbeing);
   const tier = getWellbeingTier(value);
   const fillPercent = Math.max(0, Math.min(100, value));
@@ -4516,7 +4538,7 @@ function renderWellbeingBar(player) {
     flowing: "Flowing — three turns at 75+ grants a Knowledge point.",
   };
   return `
-    <div class="wellbeing-bar wellbeing-tier-${tier.key}" title="${tierCopy[tier.key]}">
+    <div class="wellbeing-bar wellbeing-tier-${tier.key} ${pulseClass}" title="${tierCopy[tier.key]}">
       <div class="wellbeing-bar-head">
         <span class="wellbeing-bar-label">Wellbeing</span>
         <span class="wellbeing-bar-tier">${value} · ${tier.label}</span>
@@ -4529,7 +4551,7 @@ function renderWellbeingBar(player) {
   `;
 }
 
-function renderFreedomProgress(player) {
+function renderFreedomProgress(player, newlyMet = new Set()) {
   const score = getCompositeScore(player);
   const criteria = getFreedomCriteria(player);
   const metCount = criteria.filter((c) => c.met).length;
@@ -4548,14 +4570,18 @@ function renderFreedomProgress(player) {
       </div>
       <div class="freedom-progress-chips">
         ${criteria
-          .map(
-            (c) => `
-              <span class="freedom-chip ${c.met ? "met" : "unmet"}" title="${c.label} — currently ${c.detail}">
+          .map((c) => {
+            // Phase C: chip that JUST flipped ✗→✓ this render gets the
+            // gold glow + scale bump. Reading the set built in
+            // renderTurnPanel keeps the logic in one place.
+            const justMet = newlyMet.has(c.key) ? "chip-just-met" : "";
+            return `
+              <span class="freedom-chip ${c.met ? "met" : "unmet"} ${justMet}" title="${c.label} — currently ${c.detail}">
                 <span class="freedom-chip-mark">${c.met ? "✓" : "○"}</span>
                 ${c.label}
               </span>
-            `
-          )
+            `;
+          })
           .join("")}
       </div>
     </div>
@@ -4602,6 +4628,57 @@ function renderTurnPanel() {
     status = `Waiting for ${player.name}${liveSession.isHost ? "" : " or the host"} to act.`;
   }
 
+  // --- Phase C: delta-driven feedback classes ---
+  // Compute changes vs the last time we rendered this same player. The
+  // first time we see a player (snapshot undefined), treat delta as 0 so
+  // we don't pulse every stat on initial render. Snapshots are updated
+  // BEFORE building innerHTML so subsequent renders with identical data
+  // don't re-trigger the animations.
+  const prevCredit = uiFeedback.lastCreditByPlayer.get(player.id);
+  const creditDelta = prevCredit == null ? 0 : player.creditScore - prevCredit;
+  const prevWellbeing = uiFeedback.lastWellbeingByPlayer.get(player.id);
+  const wellbeingDelta = prevWellbeing == null ? 0 : Math.round(player.wellbeing) - Math.round(prevWellbeing);
+
+  // Magnitude buckets for credit pulse: small (≥1), med (≥10), huge (≥25).
+  // A +3 nudge from on-time payment is subtle; a -40 missed-payment drop
+  // gets the dramatic ring + scale bump.
+  let creditPulseClass = "";
+  const absCredit = Math.abs(creditDelta);
+  if (absCredit >= 1) {
+    const dir = creditDelta > 0 ? "up" : "down";
+    const size = absCredit >= 25 ? "huge" : absCredit >= 10 ? "med" : "small";
+    creditPulseClass = `credit-pulse-${dir}-${size}`;
+  }
+
+  // Wellbeing pulse only on larger swings (±8), per the brief. Small
+  // changes still animate via the width transition on the fill bar.
+  const wellbeingPulseClass =
+    Math.abs(wellbeingDelta) >= 8
+      ? `wellbeing-pulse-${wellbeingDelta > 0 ? "up" : "down"}`
+      : "";
+
+  // Setback shake — a credit drop ≥10 OR a wellbeing drop ≥10 is the
+  // signal for missed payment / housing default / crisis landings. The
+  // panel itself gets a restrained red-tinged shake (see CSS), not the
+  // children, because the shake/wash should read as "hit on the whole
+  // player" rather than any single stat.
+  const shouldShake = creditDelta <= -10 || wellbeingDelta <= -10;
+
+  // Newly-met freedom chips — diff current met-set vs last snapshot so
+  // only the chip that just flipped ✗→✓ gets the gold celebration.
+  // First-seen players: seed prevMet = currentMet so criteria that were
+  // already met at game start don't falsely trigger the celebration.
+  const currentCriteria = getFreedomCriteria(player);
+  const currentMet = new Set(currentCriteria.filter((c) => c.met).map((c) => c.key));
+  const firstSeenChips = !uiFeedback.lastMetChipsByPlayer.has(player.id);
+  const prevMet = firstSeenChips ? currentMet : uiFeedback.lastMetChipsByPlayer.get(player.id);
+  const newlyMet = new Set([...currentMet].filter((k) => !prevMet.has(k)));
+
+  // Save snapshots BEFORE rendering (see note above).
+  uiFeedback.lastCreditByPlayer.set(player.id, player.creditScore);
+  uiFeedback.lastWellbeingByPlayer.set(player.id, Math.round(player.wellbeing));
+  uiFeedback.lastMetChipsByPlayer.set(player.id, currentMet);
+
   elements.turnPanel.innerHTML = `
     <div class="turn-header">
       <div>
@@ -4613,8 +4690,10 @@ function renderTurnPanel() {
 
     <!-- Credit Hero Card — credit is THE stat this game teaches, so it gets
          visual dominance over all other personal stats. Score reads at ~3rem,
-         tier pill right-aligned, card border tinted by tier color. -->
-    <div class="credit-hero-card" style="--tier-color:${scoreBand.color};">
+         tier pill right-aligned, card border tinted by tier color. Phase C:
+         a pulse class (credit-pulse-{up|down}-{small|med|huge}) animates the
+         card on score change, magnitude-proportional. -->
+    <div class="credit-hero-card ${creditPulseClass}" style="--tier-color:${scoreBand.color};">
       <span class="credit-hero-label">Credit Score</span>
       <div class="credit-hero-row">
         <span class="credit-hero-score">${player.creditScore}</span>
@@ -4642,8 +4721,8 @@ function renderTurnPanel() {
         <strong>${getLifeStage(player)}</strong>
       </div>
     </div>
-    ${renderWellbeingBar(player)}
-    ${renderFreedomProgress(player)}
+    ${renderWellbeingBar(player, wellbeingPulseClass)}
+    ${renderFreedomProgress(player, newlyMet)}
     ${state.lastRollNote ? `<p class="turn-inline-note">${state.lastRollNote}</p>` : ""}
     ${creditCheckNote ? `<div class="credit-check-banner ${creditCheckBadgeClass}">${creditCheckNote}</div>` : ""}
     ${thinFileNote ? `<p class="turn-inline-note">${thinFileNote}</p>` : ""}
@@ -4662,6 +4741,23 @@ function renderTurnPanel() {
       </button>
     </div>
   `;
+
+  // Phase C: setback shake + red wash on the turn panel itself. Applied
+  // AFTER innerHTML because the turn-panel wrapper element persists across
+  // renders (only its children swap). Classic CSS-animation restart trick:
+  // remove → force reflow → re-add so the keyframes replay even if the
+  // class was already there. Clear it after the animation duration so
+  // subsequent renders start from a clean slate.
+  if (shouldShake && elements.turnPanel) {
+    elements.turnPanel.classList.remove("panel-setback");
+    void elements.turnPanel.offsetWidth;
+    elements.turnPanel.classList.add("panel-setback");
+    setTimeout(() => {
+      if (elements.turnPanel) {
+        elements.turnPanel.classList.remove("panel-setback");
+      }
+    }, 520);
+  }
 
   const rollButton = document.getElementById("roll-button");
   if (rollButton) {
@@ -4848,9 +4944,14 @@ function renderBoardFeed() {
       `
     : "";
 
+  // Phase C: new entries since last render get a "just-arrived" class
+  // that triggers a brief warm tint fade-out. We track the top log id
+  // we've already rendered; anything with a higher id is new.
+  const prevTopLogId = uiFeedback.lastTopLogId;
+  const latestIsNew = latest && typeof latest.id === "number" && latest.id > prevTopLogId;
   const spotlightCardMarkup = latest
     ? `
-        <div class="event-spotlight-card">
+        <div class="event-spotlight-card ${latestIsNew ? "just-arrived" : ""}">
           <h3>${latest.title}</h3>
           <p>${truncateText(latest.body, 175)}</p>
         </div>
@@ -4870,15 +4971,24 @@ function renderBoardFeed() {
 
   elements.eventFeed.innerHTML = playLog
     .slice(1, 4)
-    .map(
-      (entry) => `
-        <div class="event-entry">
+    .map((entry) => {
+      const isNew = typeof entry.id === "number" && entry.id > prevTopLogId;
+      return `
+        <div class="event-entry ${isNew ? "just-arrived" : ""}">
           <strong>${entry.title}</strong>
           <span>${truncateText(entry.body, 120)}</span>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
+
+  // Record the highest log id we rendered so subsequent renders don't
+  // re-trigger the just-arrived animation on entries that were already
+  // visible. Using latest.id (top of the play log) is sufficient since
+  // new entries always unshift to the top.
+  if (latest && typeof latest.id === "number") {
+    uiFeedback.lastTopLogId = latest.id;
+  }
 }
 
 function getCreditFlashMarkup(feedback, wrapperClass = "", dismissible = false, helperText = "") {

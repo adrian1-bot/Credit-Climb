@@ -3,11 +3,14 @@
   --paper-deep: #eedfbe;
   --ink: #1f2b3a;
   --muted: #576678;
-  --navy: #1f4466;
-  --teal: #2d7d7d;
+  --navy: #1b3f5f;
+  --teal: #216d6c;
+  --teal-deep: #17565a;
   --leaf: #5f8f3d;
-  --gold: #d7a73d;
-  --coral: #d7644a;
+  --gold: #c68a2e;
+  --amber: #a87420;
+  --coral: #b85c44;
+  --clay: #a24f3a;
   --rose: #b94d65;
   --sky: #7ec7de;
   --board-shadow: 0 26px 50px rgba(23, 39, 59, 0.18);
@@ -54,7 +57,7 @@ select {
   border: var(--border);
   border-radius: 28px;
   background:
-    linear-gradient(135deg, rgba(31, 68, 102, 0.88), rgba(45, 125, 125, 0.9)),
+    linear-gradient(135deg, rgba(27, 63, 95, 0.92), rgba(33, 109, 108, 0.92)),
     var(--paper);
   color: #fff9ec;
   box-shadow: var(--board-shadow);
@@ -80,6 +83,11 @@ h3 {
 .hero-banner h1 {
   margin: 0;
   font-size: clamp(2.4rem, 5vw, 4.25rem);
+  /* Tight line-height + slight negative tracking so the serif display
+     type reads as designed rather than defaulted. */
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  font-weight: 700;
 }
 
 .hero-copy {
@@ -672,9 +680,9 @@ h3 {
 }
 
 .primary-button {
-  background: linear-gradient(180deg, #ffe28a, #e4b549);
+  background: linear-gradient(180deg, #f5d381, #c89433);
   color: var(--ink);
-  box-shadow: 0 10px 18px rgba(215, 167, 61, 0.28);
+  box-shadow: 0 10px 18px rgba(168, 116, 32, 0.28);
 }
 
 .secondary-button {
@@ -1582,9 +1590,11 @@ button.credit-flash-card {
 .wellbeing-bar-label {
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 800;
+  /* Labels recede in weight (700) while tier name reads heavier (800) —
+     consistent UI weight hierarchy across the game. */
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.16em;
 }
 
 .wellbeing-bar-tier {
@@ -1610,11 +1620,13 @@ button.credit-flash-card {
 }
 
 .wellbeing-bar.wellbeing-tier-stressed .wellbeing-bar-fill {
-  background: linear-gradient(90deg, #b04a2f, #d4704b);
+  /* Desaturated red-clay, not alarm-red. */
+  background: linear-gradient(90deg, #a14e3a, #c07056);
 }
 
 .wellbeing-bar.wellbeing-tier-strained .wellbeing-bar-fill {
-  background: linear-gradient(90deg, #c47b2f, #e3a25c);
+  /* Warmer amber lean — ties to the tuned gold accent. */
+  background: linear-gradient(90deg, #b87128, #d89a52);
 }
 
 .wellbeing-bar.wellbeing-tier-steady .wellbeing-bar-fill {
@@ -1622,7 +1634,8 @@ button.credit-flash-card {
 }
 
 .wellbeing-bar.wellbeing-tier-flowing .wellbeing-bar-fill {
-  background: linear-gradient(90deg, #2d7d7d, #5fafaf);
+  /* Deeper teal for the top tier — confident, not washed out. */
+  background: linear-gradient(90deg, #1f6d6c, #4fa0a0);
 }
 
 .wellbeing-bar-foot {
@@ -2014,8 +2027,8 @@ body.in-game .hero-content {
   font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: rgba(31, 43, 58, 0.6);
+  letter-spacing: 0.18em;
+  color: rgba(31, 43, 58, 0.62);
   text-align: left;
   padding-bottom: 4px;
   border-bottom: 1px solid rgba(31, 43, 58, 0.12);
@@ -2381,7 +2394,9 @@ body.in-game .roadmap-copy span {
 .credit-hero-label {
   font-size: 0.66rem;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  /* Wider tracking for legibility at small sizes — the "Modern Boardroom"
+     move: small caps labels get breathing room. */
+  letter-spacing: 0.2em;
   color: var(--muted);
   font-weight: 700;
 }
@@ -2396,8 +2411,10 @@ body.in-game .roadmap-copy span {
 
 .credit-hero-score {
   font-size: 2.9rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  /* Heaviest weight on the game's headline number — type weight carries
+     hierarchy, not just size. Slightly tighter tracking for tabular nums. */
+  font-weight: 900;
+  letter-spacing: -0.025em;
   line-height: 1;
   color: var(--tier-color);
   font-variant-numeric: tabular-nums;
@@ -2436,17 +2453,19 @@ body.in-game .roadmap-copy span {
 }
 
 .primary-button.roll-hero {
-  /* Bolder gold than the default primary button — more saturated shadow
-     and a deeper gradient make Roll Dice the clear first-read. */
-  background: linear-gradient(180deg, #ffd56a, #d79a2e);
-  box-shadow: 0 12px 22px rgba(215, 167, 61, 0.38);
+  /* Burnt amber, not yellow — the Modern Boardroom palette calls for a
+     warm gold that reads as considered, not a mobile-game gold. Deeper
+     gradient + stronger shadow maintain Roll Dice's hierarchy without
+     relying on saturation. */
+  background: linear-gradient(180deg, #f0c066, #b87f28);
+  box-shadow: 0 12px 22px rgba(168, 116, 32, 0.4);
   font-size: 1.02rem;
   font-weight: 800;
   letter-spacing: 0.02em;
 }
 
 .primary-button.roll-hero:hover:not(:disabled) {
-  box-shadow: 0 14px 26px rgba(215, 167, 61, 0.48);
+  box-shadow: 0 14px 26px rgba(168, 116, 32, 0.5);
 }
 
 .secondary-button.hint-satellite {
@@ -2592,6 +2611,219 @@ body.in-game .roadmap-copy span {
 .dice-face-4 { transform: rotateY(-90deg) translateZ(60px); }
 .dice-face-2 { transform: rotateX(90deg) translateZ(60px); }
 .dice-face-5 { transform: rotateX(-90deg) translateZ(60px); }
+
+/* ==========================================================================
+   Phase C — feedback & reactive moments
+   Magnitude-proportional credit pulse, wellbeing pulse on large swings,
+   newly-met milestone glow, setback shake + red wash, Table Talk arrivals,
+   tactile button press states. Restrained and warm — no strobes, no
+   particle/sparkle effects, no arcade-style flashes.
+   ========================================================================== */
+
+/* --- Credit hero card pulse ---
+   Box-shadow ring animation keeps the base card background intact (the
+   base uses color-mix with --tier-color; we don't want to fight that).
+   Each keyframe's 0% / 100% matches the card's resting box-shadow so the
+   transition is seamless. Magnitude: small = thin ring (<10pt delta),
+   med = thicker ring + 0.8% scale (10-24pt), huge = thick ring + 1.5%
+   scale (25pt+). Up = leaf-green, down = clay. */
+.credit-hero-card {
+  transform-origin: center;
+}
+
+@keyframes credit-pulse-up-small {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+  40% {
+    box-shadow:
+      inset 0 0 0 1.5px rgba(95, 143, 61, 0.45),
+      0 0 0 4px rgba(95, 143, 61, 0.14),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+}
+
+@keyframes credit-pulse-up-med {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+  40% {
+    transform: scale(1.008);
+    box-shadow:
+      inset 0 0 0 2px rgba(95, 143, 61, 0.55),
+      0 0 0 8px rgba(95, 143, 61, 0.22),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+}
+
+@keyframes credit-pulse-up-huge {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+  40% {
+    transform: scale(1.015);
+    box-shadow:
+      inset 0 0 0 2px rgba(95, 143, 61, 0.7),
+      0 0 0 14px rgba(95, 143, 61, 0.3),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+}
+
+@keyframes credit-pulse-down-small {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+  40% {
+    box-shadow:
+      inset 0 0 0 1.5px rgba(162, 79, 58, 0.45),
+      0 0 0 4px rgba(162, 79, 58, 0.14),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+}
+
+@keyframes credit-pulse-down-med {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+  40% {
+    transform: scale(0.992);
+    box-shadow:
+      inset 0 0 0 2px rgba(162, 79, 58, 0.6),
+      0 0 0 8px rgba(162, 79, 58, 0.24),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+}
+
+@keyframes credit-pulse-down-huge {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+  40% {
+    transform: scale(0.985);
+    box-shadow:
+      inset 0 0 0 2.5px rgba(162, 79, 58, 0.75),
+      0 0 0 14px rgba(162, 79, 58, 0.32),
+      0 6px 14px rgba(31, 43, 58, 0.06);
+  }
+}
+
+.credit-hero-card.credit-pulse-up-small   { animation: credit-pulse-up-small   420ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.credit-hero-card.credit-pulse-up-med     { animation: credit-pulse-up-med     500ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.credit-hero-card.credit-pulse-up-huge    { animation: credit-pulse-up-huge    600ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.credit-hero-card.credit-pulse-down-small { animation: credit-pulse-down-small 420ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.credit-hero-card.credit-pulse-down-med   { animation: credit-pulse-down-med   500ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.credit-hero-card.credit-pulse-down-huge  { animation: credit-pulse-down-huge  600ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+/* --- Wellbeing bar: smooth tier shift + pulse on big swings ---
+   Adds a background transition to the bar itself so the tier-color border
+   and background shift glide rather than hard-switch when the tier flips.
+   The existing .wellbeing-bar-fill already had a width transition; we add
+   background to it too so the fill gradient cross-fades on tier changes. */
+.wellbeing-bar {
+  transition: background 480ms ease, border-color 480ms ease, box-shadow 300ms ease;
+}
+.wellbeing-bar-fill {
+  transition: width 520ms cubic-bezier(0.2, 0.7, 0.3, 1), background 480ms ease;
+}
+
+@keyframes wellbeing-pulse-up {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(33, 109, 108, 0); }
+  40%      { box-shadow: 0 0 0 4px rgba(33, 109, 108, 0.24); }
+}
+@keyframes wellbeing-pulse-down {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(162, 79, 58, 0); }
+  40%      { box-shadow: 0 0 0 4px rgba(162, 79, 58, 0.24); }
+}
+.wellbeing-bar.wellbeing-pulse-up   { animation: wellbeing-pulse-up 520ms ease-out; }
+.wellbeing-bar.wellbeing-pulse-down { animation: wellbeing-pulse-down 520ms ease-out; }
+
+/* --- Freedom chip: ✗→✓ gold celebration ---
+   Only triggers for chips that flipped this render. Warm amber glow +
+   brief scale bump — 720ms, tasteful. */
+@keyframes chip-just-met {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(168, 116, 32, 0); }
+  35%  { transform: scale(1.14); box-shadow: 0 0 0 6px rgba(168, 116, 32, 0.34), 0 2px 8px rgba(168, 116, 32, 0.26); }
+  70%  { transform: scale(1.04); box-shadow: 0 0 0 3px rgba(168, 116, 32, 0.18); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(168, 116, 32, 0); }
+}
+.freedom-chip.chip-just-met {
+  animation: chip-just-met 720ms cubic-bezier(0.25, 1.1, 0.35, 1);
+}
+
+/* --- Turn panel setback: tight shake + restrained red-clay wash ---
+   2-3 oscillations on X axis; background color rises to a muted clay
+   tint at the peak and clears by the end. "Dignity under pressure" —
+   strong enough to register, not arcade-like. Triggered on credit or
+   wellbeing drop ≥10. */
+@keyframes panel-setback {
+  0%   { transform: translateX(0);    background-color: transparent; }
+  10%  { transform: translateX(-4px); background-color: rgba(162, 79, 58, 0.08); }
+  25%  { transform: translateX(4px);  background-color: rgba(162, 79, 58, 0.1); }
+  40%  { transform: translateX(-3px); background-color: rgba(162, 79, 58, 0.08); }
+  55%  { transform: translateX(2px);  background-color: rgba(162, 79, 58, 0.05); }
+  70%  { transform: translateX(-1px); background-color: rgba(162, 79, 58, 0.02); }
+  100% { transform: translateX(0);    background-color: transparent; }
+}
+.turn-panel.panel-setback {
+  animation: panel-setback 480ms cubic-bezier(0.35, 0.7, 0.4, 1);
+}
+
+/* --- Table Talk: soft warm-tint fade on new entries ---
+   Warm amber tint lands when the entry is first rendered, then decays
+   to the resting card style over ~820ms. No scale or move — just a
+   quiet signal that "this is the new thing." */
+@keyframes event-just-arrived {
+  0%   { background: rgba(255, 228, 168, 0.78); border-color: rgba(168, 116, 32, 0.42); }
+  30%  { background: rgba(255, 232, 186, 0.55); border-color: rgba(168, 116, 32, 0.3); }
+  100% { background: rgba(255, 255, 255, 0.52); border-color: rgba(31, 43, 58, 0.12); }
+}
+.event-entry.just-arrived {
+  animation: event-just-arrived 820ms ease-out;
+}
+
+@keyframes spotlight-just-arrived {
+  0%   { box-shadow: 0 0 0 3px rgba(168, 116, 32, 0.3); }
+  100% { box-shadow: 0 0 0 0 rgba(168, 116, 32, 0); }
+}
+.event-spotlight-card.just-arrived {
+  animation: spotlight-just-arrived 820ms ease-out;
+}
+
+/* --- Button press states ---
+   Tactile scale-down on mousedown, crisp release. Applied only when not
+   disabled so locked buttons don't feel interactive. Roll Dice gets a
+   slightly deeper scale + shadow pullback so the press reads as "heavier"
+   than the satellite button. */
+.primary-button:active:not(:disabled),
+.secondary-button:active:not(:disabled),
+.option-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.975);
+  transition: transform 80ms ease-out, box-shadow 80ms ease-out;
+}
+.primary-button.roll-hero:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 6px 14px rgba(168, 116, 32, 0.32);
+}
+.secondary-button.hint-satellite:active:not(:disabled) {
+  transform: translateY(0) scale(0.975);
+  box-shadow: 0 2px 6px rgba(31, 43, 58, 0.14);
+}
 
 @media (max-width: 820px) {
   .dice-scene {
