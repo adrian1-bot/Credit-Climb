@@ -120,6 +120,48 @@
           <div class="board-frame">
             <div class="board-grid" id="board"></div>
             <div class="board-center">
+              <!-- Dice theater — overlays center-card during rolls. Hidden by
+                   default (opacity 0, pointer-events none). CSS 3D cube with
+                   6 pip faces. Commit 2: scaffolding only, no behavior yet. -->
+              <div class="dice-theater" id="dice-theater" aria-hidden="true">
+                <div class="dice-scene">
+                  <div class="dice-cube" id="dice-cube">
+                    <div class="dice-face dice-face-1">
+                      <span class="dice-pip" style="grid-column:2;grid-row:2;"></span>
+                    </div>
+                    <div class="dice-face dice-face-2">
+                      <span class="dice-pip" style="grid-column:1;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:3;"></span>
+                    </div>
+                    <div class="dice-face dice-face-3">
+                      <span class="dice-pip" style="grid-column:1;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:2;grid-row:2;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:3;"></span>
+                    </div>
+                    <div class="dice-face dice-face-4">
+                      <span class="dice-pip" style="grid-column:1;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:1;grid-row:3;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:3;"></span>
+                    </div>
+                    <div class="dice-face dice-face-5">
+                      <span class="dice-pip" style="grid-column:1;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:2;grid-row:2;"></span>
+                      <span class="dice-pip" style="grid-column:1;grid-row:3;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:3;"></span>
+                    </div>
+                    <div class="dice-face dice-face-6">
+                      <span class="dice-pip" style="grid-column:1;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:1;"></span>
+                      <span class="dice-pip" style="grid-column:1;grid-row:2;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:2;"></span>
+                      <span class="dice-pip" style="grid-column:1;grid-row:3;"></span>
+                      <span class="dice-pip" style="grid-column:3;grid-row:3;"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="center-card">
                 <h2 class="center-title">Table Talk</h2>
                 <div class="event-spotlight" id="event-spotlight"></div>

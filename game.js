@@ -4484,7 +4484,7 @@ function renderTurnPanel() {
 
   let status = "Choose the next move.";
   if (state.phase === "ready") {
-    status = "Roll to move into the next chapter.";
+    status = "Your turn — ready to roll.";
   } else if (state.phase === "reflection") {
     status = "Reflection turn. Ask the advisor, then continue.";
   } else if (state.phase === "ai-ready") {

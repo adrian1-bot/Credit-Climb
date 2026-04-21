@@ -2119,8 +2119,8 @@ body.in-game .roadmap-copy span {
 .player-card.compact .compact-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 2px;
+  gap: 10px;
+  margin-top: 4px;
 }
 /* Shared tile layout for all three chips — number stacked above label. */
 .player-card.compact .compact-summary > span {
@@ -2464,4 +2464,145 @@ body.in-game .roadmap-copy span {
   .turn-action-row {
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
+}
+
+/* ==========================================================================
+   Phase B / Commit 2 — Dice theater scaffolding.
+   A 3D CSS cube with six pip faces, overlaid on the board-center during
+   rolls. Hidden by default. Commit 3 will add the JS that toggles .visible
+   and animates rotation to a target face. This commit ships only the
+   visual scaffolding so the theater can be inspected / admired statically.
+   ========================================================================== */
+
+/* Theater — covers the entire board-center (the hollow middle of the
+   board grid). Renders above .center-card visually via absolute
+   positioning, but pointer-events:none ensures Table Talk stays clickable
+   through the overlay when the theater isn't rolling. */
+.dice-theater {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Soft radial dim — focuses attention on the cube, preserves the
+     surrounding board aesthetic without going full black. */
+  background: radial-gradient(
+    circle at center,
+    rgba(31, 43, 58, 0.42),
+    rgba(31, 43, 58, 0.2) 48%,
+    rgba(31, 43, 58, 0.02) 80%,
+    transparent 100%
+  );
+  border-radius: 28px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+  z-index: 5;
+}
+
+/* .visible is toggled by the dice-roll coroutine (commit 3). */
+.dice-theater.visible {
+  opacity: 1;
+}
+
+/* Perspective wrapper. Separate element so we can animate the cube
+   without disturbing perspective origin math. */
+.dice-scene {
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1000px;
+  perspective-origin: 50% 45%;
+}
+
+/* The cube itself — resting angle shows face-1 (front), with face-2
+   (top) and face-3 (right) peeking in. Classic isometric-ish die pose.
+   Commit 3 will animate `transform` to target rotations on each roll. */
+.dice-cube {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  transform-style: preserve-3d;
+  transform: rotateX(-22deg) rotateY(-32deg);
+  /* Bezier with slight overshoot (y2 > 1) creates the bounce-on-settle
+     the project brief calls for. Duration matches commit 3's ~1.0s roll. */
+  transition: transform 1s cubic-bezier(0.22, 0.82, 0.32, 1.12);
+  /* Subtle drop shadow under the cube so it feels like a physical die
+     rather than a flat decal floating on the board. */
+  filter: drop-shadow(0 14px 18px rgba(31, 43, 58, 0.35));
+}
+
+/* Shared face styles. Each face is a 120×120 rounded square with a
+   warm cream gradient, a dark border, and a 3×3 grid for pip
+   placement. Pips are positioned via inline `grid-column` / `grid-row`
+   in the markup to keep one rule set per face. */
+.dice-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  border: 3px solid rgba(31, 43, 58, 0.78);
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.92), transparent 55%),
+    linear-gradient(148deg, #fff6d9, #e6cd8f);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.5),
+    inset 0 -6px 12px rgba(163, 127, 59, 0.28);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 14px;
+  gap: 4px;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+}
+
+/* Individual pips — dark ink dots with a slight highlight so they
+   read as carved-in, not printed on. */
+.dice-pip {
+  width: 100%;
+  max-width: 16px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, #5a4520 0%, #2b1a08 55%, #140a02 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.55),
+    0 1px 1px rgba(255, 255, 255, 0.45);
+  align-self: center;
+  justify-self: center;
+}
+
+/* Face placement in 3D space. translateZ(60px) puts each face at half
+   the cube side length from center. Face assignments:
+   1 = front, 6 = back (opposite → sum to 7)
+   2 = top,   5 = bottom
+   3 = right, 4 = left
+   This convention is used by the JS roll logic in commit 3. */
+.dice-face-1 { transform: translateZ(60px); }
+.dice-face-6 { transform: rotateY(180deg) translateZ(60px); }
+.dice-face-3 { transform: rotateY(90deg) translateZ(60px); }
+.dice-face-4 { transform: rotateY(-90deg) translateZ(60px); }
+.dice-face-2 { transform: rotateX(90deg) translateZ(60px); }
+.dice-face-5 { transform: rotateX(-90deg) translateZ(60px); }
+
+@media (max-width: 820px) {
+  .dice-scene {
+    width: 150px;
+    height: 150px;
+  }
+  .dice-cube {
+    width: 100px;
+    height: 100px;
+  }
+  .dice-face {
+    padding: 12px;
+  }
+  .dice-face-1 { transform: translateZ(50px); }
+  .dice-face-6 { transform: rotateY(180deg) translateZ(50px); }
+  .dice-face-3 { transform: rotateY(90deg) translateZ(50px); }
+  .dice-face-4 { transform: rotateY(-90deg) translateZ(50px); }
+  .dice-face-2 { transform: rotateX(90deg) translateZ(50px); }
+  .dice-face-5 { transform: rotateX(-90deg) translateZ(50px); }
 }
