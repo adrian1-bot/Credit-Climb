@@ -717,7 +717,7 @@ h3 {
 
 .turn-summary-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
@@ -1472,5 +1472,194 @@ button.credit-flash-card {
 @media (max-width: 420px) {
   .roadmap-line {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ----- Wellbeing UI ----- */
+
+.wellbeing-pill strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+}
+
+.turn-stat-pill.wellbeing-tier-stressed {
+  border-color: rgba(176, 74, 47, 0.45);
+  background: linear-gradient(180deg, rgba(215, 118, 87, 0.18), rgba(176, 74, 47, 0.1));
+  animation: wellbeing-stressed-pulse 2.4s ease-in-out infinite;
+}
+
+.turn-stat-pill.wellbeing-tier-stressed strong {
+  color: #8f3a22;
+}
+
+.turn-stat-pill.wellbeing-tier-strained {
+  border-color: rgba(196, 123, 47, 0.42);
+  background: linear-gradient(180deg, rgba(220, 160, 86, 0.18), rgba(196, 123, 47, 0.1));
+}
+
+.turn-stat-pill.wellbeing-tier-strained strong {
+  color: #8a5416;
+}
+
+.turn-stat-pill.wellbeing-tier-steady {
+  border-color: rgba(95, 143, 61, 0.42);
+  background: linear-gradient(180deg, rgba(137, 187, 108, 0.18), rgba(95, 143, 61, 0.1));
+}
+
+.turn-stat-pill.wellbeing-tier-steady strong {
+  color: #3d5f22;
+}
+
+.turn-stat-pill.wellbeing-tier-flowing {
+  border-color: rgba(45, 125, 125, 0.48);
+  background: linear-gradient(180deg, rgba(96, 175, 175, 0.2), rgba(45, 125, 125, 0.12));
+}
+
+.turn-stat-pill.wellbeing-tier-flowing strong {
+  color: #1d5f5f;
+}
+
+.wellbeing-bar {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(31, 43, 58, 0.12);
+  background: rgba(31, 43, 58, 0.05);
+}
+
+.wellbeing-bar.wellbeing-tier-stressed {
+  border-color: rgba(176, 74, 47, 0.4);
+  background: linear-gradient(180deg, rgba(215, 118, 87, 0.12), rgba(176, 74, 47, 0.06));
+  animation: wellbeing-stressed-pulse 2.4s ease-in-out infinite;
+}
+
+.wellbeing-bar.wellbeing-tier-strained {
+  border-color: rgba(196, 123, 47, 0.38);
+  background: linear-gradient(180deg, rgba(220, 160, 86, 0.12), rgba(196, 123, 47, 0.06));
+}
+
+.wellbeing-bar.wellbeing-tier-steady {
+  border-color: rgba(95, 143, 61, 0.4);
+  background: linear-gradient(180deg, rgba(137, 187, 108, 0.12), rgba(95, 143, 61, 0.06));
+}
+
+.wellbeing-bar.wellbeing-tier-flowing {
+  border-color: rgba(45, 125, 125, 0.45);
+  background: linear-gradient(180deg, rgba(96, 175, 175, 0.14), rgba(45, 125, 125, 0.08));
+}
+
+.wellbeing-bar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.wellbeing-bar-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.wellbeing-bar-tier {
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.wellbeing-bar-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(31, 43, 58, 0.14);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(31, 43, 58, 0.18);
+}
+
+.wellbeing-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 420ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.wellbeing-bar.wellbeing-tier-stressed .wellbeing-bar-fill {
+  background: linear-gradient(90deg, #b04a2f, #d4704b);
+}
+
+.wellbeing-bar.wellbeing-tier-strained .wellbeing-bar-fill {
+  background: linear-gradient(90deg, #c47b2f, #e3a25c);
+}
+
+.wellbeing-bar.wellbeing-tier-steady .wellbeing-bar-fill {
+  background: linear-gradient(90deg, #5f8f3d, #88bb6c);
+}
+
+.wellbeing-bar.wellbeing-tier-flowing .wellbeing-bar-fill {
+  background: linear-gradient(90deg, #2d7d7d, #5fafaf);
+}
+
+.wellbeing-bar-foot {
+  margin-top: 8px;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.wellbeing-delta {
+  font-weight: 700;
+}
+
+.wellbeing-delta.up {
+  color: #3d5f22;
+}
+
+.wellbeing-delta.down {
+  color: #8f3a22;
+}
+
+.player-summary-wellbeing {
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(31, 43, 58, 0.14);
+  background: rgba(31, 43, 58, 0.05);
+}
+
+.player-summary-wellbeing strong {
+  color: var(--ink);
+}
+
+.player-summary-wellbeing.wellbeing-tier-stressed {
+  border-color: rgba(176, 74, 47, 0.42);
+  background: rgba(215, 118, 87, 0.14);
+  color: #8f3a22;
+}
+
+.player-summary-wellbeing.wellbeing-tier-strained {
+  border-color: rgba(196, 123, 47, 0.4);
+  background: rgba(220, 160, 86, 0.14);
+  color: #8a5416;
+}
+
+.player-summary-wellbeing.wellbeing-tier-steady {
+  border-color: rgba(95, 143, 61, 0.4);
+  background: rgba(137, 187, 108, 0.14);
+  color: #3d5f22;
+}
+
+.player-summary-wellbeing.wellbeing-tier-flowing {
+  border-color: rgba(45, 125, 125, 0.42);
+  background: rgba(96, 175, 175, 0.14);
+  color: #1d5f5f;
+}
+
+@keyframes wellbeing-stressed-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(176, 74, 47, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(176, 74, 47, 0.22);
   }
 }

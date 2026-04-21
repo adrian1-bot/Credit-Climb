@@ -21,6 +21,7 @@ const BACKGROUNDS = [
     cardBalance: 80,
     knowledge: 0,
     shields: 0,
+    wellbeing: 70,
   },
   {
     id: "no-safety-net",
@@ -33,6 +34,7 @@ const BACKGROUNDS = [
     cardBalance: 170,
     knowledge: 1,
     shields: 1,
+    wellbeing: 45,
   },
   {
     id: "scholarship",
@@ -45,6 +47,7 @@ const BACKGROUNDS = [
     cardBalance: 120,
     knowledge: 1,
     shields: 0,
+    wellbeing: 55,
   },
   {
     id: "medical-burden",
@@ -57,6 +60,7 @@ const BACKGROUNDS = [
     cardBalance: 180,
     knowledge: 0,
     shields: 1,
+    wellbeing: 40,
   },
   {
     id: "mentor-network",
@@ -69,6 +73,7 @@ const BACKGROUNDS = [
     cardBalance: 80,
     knowledge: 2,
     shields: 0,
+    wellbeing: 65,
   },
 ];
 
@@ -1780,6 +1785,12 @@ function makePlayer(name, color, background, career, isAI) {
     creditRawTargetScore: background.creditScore,
     creditHistoryCeiling: 850,
     creditTargetScore: background.creditScore,
+    wellbeing: typeof background.wellbeing === "number" ? background.wellbeing : 55,
+    wellbeingFlowCounter: 0,
+    burnoutPendingResolution: false,
+    burnoutActiveSpell: false,
+    lastWellbeingDelta: 0,
+    lastWellbeingReason: null,
     turnFlags: createTurnFlags(),
   };
 }
@@ -1836,6 +1847,136 @@ function startGame(humanNames, aiCount) {
 
   renderAll();
   void beginTurn();
+}
+
+function getWellbeingTier(wellbeing) {
+  const value = Math.round(wellbeing);
+  if (value <= 30) {
+    return { key: "stressed", label: "Stressed", color: "#b04a2f" };
+  }
+  if (value <= 55) {
+    return { key: "strained", label: "Strained", color: "#c47b2f" };
+  }
+  if (value <= 74) {
+    return { key: "steady", label: "Steady", color: "#5f8f3d" };
+  }
+  return { key: "flowing", label: "Flowing", color: "#2d7d7d" };
+}
+
+function applyWellbeing(player, delta, reason) {
+  if (!player || !delta) {
+    return 0;
+  }
+  const previous = player.wellbeing;
+  const nextValue = clamp(previous + delta, 0, 100);
+  const actual = nextValue - previous;
+  player.wellbeing = nextValue;
+  player.lastWellbeingDelta = actual;
+  player.lastWellbeingReason = reason || null;
+
+  // Burnout trigger: once per "spell" under 15. Spell clears at 20+.
+  if (previous >= 15 && nextValue < 15 && !player.burnoutActiveSpell) {
+    player.burnoutActiveSpell = true;
+    player.burnoutPendingResolution = true;
+  }
+  if (nextValue >= 20) {
+    player.burnoutActiveSpell = false;
+  }
+  return actual;
+}
+
+function resolveStressedTax(player, options = {}) {
+  const { silent = false } = options;
+  if (player.wellbeing > 30) {
+    return 0;
+  }
+  const taken = takeCash(player, 25);
+  if (taken > 0 && !silent) {
+    logEvent(
+      "Stress Tax",
+      `${player.name} paid ${formatMoney(taken)} this turn on small stress-coping costs (coffee runs, delivery, a missed deal).`
+    );
+  }
+  return taken;
+}
+
+function maybeGrantFlowState(player, options = {}) {
+  const { silent = false } = options;
+  if (player.wellbeing >= 75) {
+    player.wellbeingFlowCounter += 1;
+    if (player.wellbeingFlowCounter >= 3) {
+      player.wellbeingFlowCounter = 0;
+      player.knowledge += 1;
+      if (!silent) {
+        logEvent(
+          "Flow State",
+          `${player.name} has been steady long enough to think clearly — picked up a Knowledge point.`
+        );
+      }
+      queuePlayerNotice(player, {
+        title: "Flow State",
+        body: "Three steady turns in a row. You gained 1 Knowledge from finally having room to think.",
+        artId: "repair",
+        artLabel: "Steady Mind",
+      });
+    }
+  } else {
+    player.wellbeingFlowCounter = 0;
+  }
+}
+
+function buildBurnoutDecision(player) {
+  return ensureDecision({
+    title: "You're Burning Out",
+    body: "Your Wellbeing dropped into the red. Burnout recovery takes several turns — these choices are a step out of the pit, not an instant reset.",
+    artId: "repair",
+    artLabel: "Burnout Check",
+    options: [
+      createOption({
+        label: "Treat Yourself",
+        description: "Splurge $180 on a real break. Big Wellbeing lift, but you still won't fully reset this turn.",
+        effect: (current) => {
+          const payment = spendCashThenCard(current, 180);
+          applyWellbeing(current, 13, "Burnout splurge");
+          current.turnFlags.splurged = true;
+          if (payment.shortfall > 0) {
+            // ensure shortfall is reflected
+          }
+        },
+        aiScore: (current) => (current.cash >= 180 ? 18 : 4),
+        resultText: (current) => `${current.name} stepped back for a real break — recovery will take a couple more turns, but the worst is off.`,
+      }),
+      createOption({
+        label: "Power Through",
+        description: "Pick up an overtime shift for $40. Wellbeing barely moves; you stay in the Stressed tier.",
+        effect: (current) => {
+          current.cash += 40;
+          applyWellbeing(current, 2, "Powered through burnout");
+        },
+        aiScore: (current) => (current.cash < 200 ? 10 : 2),
+        resultText: (current) => `${current.name} powered through and kept the paycheck moving — still running on empty.`,
+      }),
+      createOption({
+        label: "Lean on the Network",
+        description: "$30 for a campus counselor or mentor call. Modest Wellbeing lift — recovery continues over the next few turns.",
+        effect: (current) => {
+          spendCashThenCard(current, 30);
+          applyWellbeing(current, 5, "Leaned on network");
+        },
+        aiScore: (current) => 14 + (current.cash < 150 ? 4 : 0),
+        resultText: (current) => `${current.name} reached out instead of collapsing — a small lift, and the start of a longer climb back.`,
+      }),
+    ],
+  });
+}
+
+async function maybeResolveBurnout(player) {
+  if (!player || !player.burnoutPendingResolution) {
+    return;
+  }
+  player.burnoutPendingResolution = false;
+  const decision = buildBurnoutDecision(player);
+  await offerDecision(player, decision);
 }
 
 function recordMissedPayment(player, markField) {
@@ -2435,6 +2576,9 @@ function performUpkeep(player, options = {}) {
     handleCardPayment(player, { silent });
   }
 
+  resolveStressedTax(player, { silent });
+  maybeGrantFlowState(player, { silent });
+
   const utilization = getUtilization(player);
   player.lowUtilizationStreak = utilization <= 0.3 ? player.lowUtilizationStreak + 1 : 0;
 
@@ -2641,6 +2785,7 @@ function checkMissionCompletion(player) {
 
     player.completedMissionIds.push(mission.id);
     mission.applyReward(player);
+    applyWellbeing(player, 2, "Mission complete");
 
     logEvent(
       "Mission Complete",
@@ -2684,6 +2829,7 @@ function buildCreditDecision(player) {
           current.cash -= payment;
           current.cardBalance = Math.max(0, current.cardBalance - payment);
         }
+        applyWellbeing(current, -1, "Tightened up payments");
       },
       aiScore: (current) => 14 + (current.creditScore < 750 ? 16 : 8) + getUtilization(current) * 18,
       resultText: (current) => `${current.name} switched to full autopay and tightened up their credit habits.`,
@@ -2703,6 +2849,7 @@ function buildCreditDecision(player) {
         if (debtHit.towardCard > 0 || debtHit.towardLoan > 0) {
           current.autopayMode = "full";
         }
+        // Wellbeing: 0 — proactive debt reduction cancels the cash sting.
       },
       aiScore: (current) => 16 + getUtilization(current) * 34 + (getTotalDebt(current) > 4000 ? 18 : 0),
       resultText: (current) => `${current.name} made an extra debt payment to protect their score.`,
@@ -2721,6 +2868,7 @@ function buildCreditDecision(player) {
           if (payment.shortfall > 0) {
             addCardBalance(current, 20);
           }
+          applyWellbeing(current, -1, "Tied up cash as collateral");
         },
         aiScore: (current) => 18 + (650 - current.creditScore),
         resultText: (current) => `${current.name} opened a secured card to rebuild credit the smart way.`,
@@ -2734,6 +2882,7 @@ function buildCreditDecision(player) {
         effect: (current) => {
           current.autopayMode = "minimum";
           current.cash += 60;
+          applyWellbeing(current, 3, "Eased off payments");
         },
         aiScore: (current) => (current.cash < 500 ? 12 : -4) + (getTotalDebt(current) > 5000 ? 8 : 0),
         resultText: (current) => `${current.name} preserved a little extra cash by easing off to minimum autopay.`,
@@ -2760,6 +2909,7 @@ function buildLifestyleDecision(player) {
         description: "Keep your budget steady and move $80 into your future.",
         effect: (current) => {
           current.cash += 80;
+          applyWellbeing(current, -2, "Skipped the spree");
         },
         aiScore: (current) => 16 + (current.creditScore < 750 ? 8 : 0),
         resultText: (current) => `${current.name} skipped the spree and kept the budget in line.`,
@@ -2770,6 +2920,7 @@ function buildLifestyleDecision(player) {
         effect: (current) => {
           spendCashThenCard(current, 180);
           current.turnFlags.splurged = true;
+          applyWellbeing(current, 6, "Shopping treat");
         },
         aiScore: (current) => (current.cash > 3500 ? 4 : -10),
         resultText: (current) => `${current.name} treated themselves, but nothing hit the card.`,
@@ -2780,6 +2931,7 @@ function buildLifestyleDecision(player) {
         effect: (current) => {
           addCardBalance(current, 260);
           current.turnFlags.splurged = true;
+          applyWellbeing(current, 8, "Swiped for the thrill");
         },
         aiScore: (current) => -26 - getUtilization(current) * 32,
         resultText: (current) => `${current.name} swiped now and left future-them with more utilization.`,
@@ -2802,6 +2954,7 @@ function buildSavingsDecision(player) {
           if (moved < 220) {
             addCardBalance(current, 220 - moved);
           }
+          applyWellbeing(current, -1, "Sent cash to emergency fund");
         },
         aiScore: (current) => 12 + (current.emergencyFund < 500 ? 18 : 4) + (current.shields === 0 ? 6 : 0),
         resultText: (current) => `${current.name} built more emergency savings for the next storm.`,
@@ -2812,6 +2965,7 @@ function buildSavingsDecision(player) {
         effect: (current) => {
           const paid = takeCash(current, 250);
           payHighestInterestDebt(current, paid);
+          applyWellbeing(current, -1, "Paid down debt");
         },
         aiScore: (current) => 10 + getUtilization(current) * 30 + (getTotalDebt(current) > 4000 ? 15 : 0),
         resultText: (current) => `${current.name} used this breather to shrink debt instead of spending.`,
@@ -2821,6 +2975,7 @@ function buildSavingsDecision(player) {
         description: "Hold the cash now and collect a smaller $90 side gig bonus.",
         effect: (current) => {
           current.cash += 90;
+          applyWellbeing(current, 2, "Kept cash on hand");
         },
         aiScore: (current) => (current.cash < 450 ? 18 : 2),
         resultText: (current) => `${current.name} stayed flexible and picked up extra cash instead.`,
@@ -2841,6 +2996,7 @@ function buildHousingDecision(player) {
           spendCashThenCard(current, 360);
           current.housing = { name: "Shared Apartment", recurringCost: 220 };
           current.housingRisk = 0;
+          applyWellbeing(current, 6, "Got stable housing");
         },
         aiScore: (current) => (!current.housing ? 28 : 4) + (current.creditScore >= 580 ? 12 : -12),
         resultText: (current) => `${current.name} locked in a shared apartment and gained housing stability.`,
@@ -2855,6 +3011,7 @@ function buildHousingDecision(player) {
           spendCashThenCard(current, 520);
           current.housing = { name: "Premium Apartment", recurringCost: 260 };
           current.housingRisk = 0;
+          applyWellbeing(current, 8, "Premium apartment");
         },
         aiScore: (current) => (!current.housing ? 20 : 2) + (current.creditScore >= 740 ? 18 : -18),
         resultText: (current) => `${current.name} used stronger credit to land a premium apartment.`,
@@ -2867,6 +3024,7 @@ function buildHousingDecision(player) {
         description: "Pay nothing now, but housing stays unstable and progress slows.",
         effect: (current) => {
           current.cash += 70;
+          applyWellbeing(current, -9, "Chronic housing instability");
         },
         aiScore: (current) => (current.cash < 300 ? 12 : -10),
         resultText: (current) => `${current.name} delayed stable housing to preserve cash.`,
@@ -2880,6 +3038,7 @@ function buildHousingDecision(player) {
         effect: (current) => {
           current.cash += 90;
           current.housingRisk = 0;
+          applyWellbeing(current, 1, "Stayed put");
         },
         aiScore: () => 10,
         resultText: (current) => `${current.name} stayed put and kept housing steady.`,
@@ -2893,6 +3052,7 @@ function buildHousingDecision(player) {
         effect: (current) => {
           spendCashThenCard(current, 120);
           current.housing.recurringCost = Math.max(180, current.housing.recurringCost - 25);
+          applyWellbeing(current, -1, "Negotiation stress");
         },
         aiScore: (current) => 12 + (current.housing.recurringCost > 220 ? 8 : 0),
         resultText: (current) => `${current.name} negotiated a better lease and lowered future bills.`,
@@ -2909,6 +3069,7 @@ function buildHousingDecision(player) {
             name: "Upgraded Apartment",
             recurringCost: current.housing.recurringCost + 20,
           };
+          applyWellbeing(current, 5, "Upgraded neighborhood");
         },
         aiScore: (current) => (current.creditScore >= 740 && current.cash > 2200 ? 8 : -6),
         resultText: (current) => `${current.name} upgraded their place for a smoother living situation.`,
@@ -2937,6 +3098,7 @@ function buildTransportDecision(player) {
           current.transport = { name: "Transit Pass", recurringCost: 60 };
           current.transportTrap = false;
           current.transportRisk = 0;
+          applyWellbeing(current, 2, "Reliable mobility");
         },
         aiScore: (current) => (!current.transport ? 18 : 6) + (current.creditScore < 670 ? 8 : 0),
         resultText: (current) => `${current.name} chose affordable transit and protected monthly cash flow.`,
@@ -2953,6 +3115,7 @@ function buildTransportDecision(player) {
           current.transport = { name: "Reliable Used Car", recurringCost: 150 };
           current.transportTrap = current.creditScore < 670;
           current.transportRisk = 0;
+          applyWellbeing(current, 4, "Got your own ride");
         },
         aiScore: (current) => (!current.transport ? 22 : 6) + (current.creditScore >= 670 ? 14 : -16),
         resultText: (current) => `${current.name} financed a reliable used car to unlock better mobility.`,
@@ -2970,6 +3133,7 @@ function buildTransportDecision(player) {
           current.transportTrap = true;
           current.transportRisk = 0;
           addBadLoanMark(current, 1);
+          applyWellbeing(current, 3, "Fast-approval relief");
         },
         aiScore: () => -28,
         resultText: (current) => `${current.name} got approved fast, but the transport deal is a debt trap.`,
@@ -2983,6 +3147,7 @@ function buildTransportDecision(player) {
         effect: (current) => {
           spendCashThenCard(current, 90);
           current.transportRisk = 0;
+          applyWellbeing(current, -1, "Chore maintenance");
         },
         aiScore: () => 12,
         resultText: (current) => `${current.name} kept their transportation reliable with routine upkeep.`,
@@ -2997,6 +3162,7 @@ function buildTransportDecision(player) {
           current.transport = { name: "Transit Pass", recurringCost: 60 };
           current.transportTrap = false;
           current.transportRisk = 0;
+          applyWellbeing(current, -2, "Downgrade sting");
         },
         aiScore: (current) => (current.transport.recurringCost > 150 ? 14 : 4),
         resultText: (current) => `${current.name} traded down to transit and lowered monthly costs.`,
@@ -3013,6 +3179,7 @@ function buildTransportDecision(player) {
           current.transport = { name: "Upgraded Car", recurringCost: 170 };
           current.transportTrap = false;
           current.transportRisk = 0;
+          applyWellbeing(current, 5, "Upgraded ride");
         },
         aiScore: (current) => (current.creditScore >= 740 && current.cash > 2400 ? 7 : -4),
         resultText: (current) => `${current.name} upgraded transportation and kept it under control.`,
@@ -3039,6 +3206,7 @@ function buildGrowthDecision(player) {
         effect: (current) => {
           spendCashThenCard(current, 220);
           current.growthAsset = { name: "Side Hustle", passiveIncome: 150, value: 850 };
+          applyWellbeing(current, -2, "Side hustle grind");
         },
         aiScore: (current) => (!current.growthAsset ? 24 : 6) + (current.cash > 500 ? 8 : -8),
         resultText: (current) => `${current.name} launched a side hustle and opened a growth lane.`,
@@ -3052,6 +3220,7 @@ function buildGrowthDecision(player) {
         effect: (current) => {
           spendCashThenCard(current, 340);
           current.growthAsset = { name: "Index Fund", passiveIncome: 130, value: 980 };
+          applyWellbeing(current, -1, "Delayed gratification");
         },
         aiScore: (current) => (!current.growthAsset ? 18 : 4) + (current.creditScore >= 740 ? 14 : -10),
         resultText: (current) => `${current.name} started investing for a steadier future.`,
@@ -3064,6 +3233,7 @@ function buildGrowthDecision(player) {
         description: "Bank $110 instead of investing right now.",
         effect: (current) => {
           current.cash += 110;
+          applyWellbeing(current, 1, "No pressure to act");
         },
         aiScore: (current) => (current.cash < 450 ? 16 : 1),
         resultText: (current) => `${current.name} passed on growth for now and held onto more cash.`,
@@ -3078,6 +3248,7 @@ function buildGrowthDecision(player) {
           spendCashThenCard(current, 190);
           current.growthAsset.passiveIncome += 45;
           current.growthAsset.value += 220;
+          applyWellbeing(current, -1, "Reinvested instead of spending");
         },
         aiScore: (current) => 14 + (getSavings(current) > 2000 ? 8 : 0),
         resultText: (current) => `${current.name} reinvested and grew their wealth-building engine.`,
@@ -3091,6 +3262,7 @@ function buildGrowthDecision(player) {
         effect: (current) => {
           current.cash += 180;
           depositToEmergencyFund(current, 180);
+          applyWellbeing(current, 1, "Padded the buffer");
         },
         aiScore: (current) => (current.emergencyFund < 500 ? 18 : 6),
         resultText: (current) => `${current.name} skimmed profits into cash reserves.`,
@@ -3101,7 +3273,9 @@ function buildGrowthDecision(player) {
       createOption({
         label: "Hold Steady",
         description: "No extra cost. Keep current passive income rolling.",
-        effect: () => {},
+        effect: (current) => {
+          applyWellbeing(current, 1, "Let things run");
+        },
         aiScore: () => 7,
         resultText: (current) => `${current.name} let the current growth plan keep compounding.`,
       })
@@ -3125,6 +3299,7 @@ function buildLoanShopDecision(player) {
         current.cash += 320;
         addLoanBalance(current, 350);
         clearBadLoanStatus(current, 1);
+        applyWellbeing(current, 2, "Cash relief without predatory terms");
       },
       aiScore: (current) => (current.cash < 300 ? 12 : 2) + (current.creditScore < 670 ? 8 : 0),
       resultText: (current) => `${current.name} chose the safer loan option and avoided a trap.`,
@@ -3136,6 +3311,7 @@ function buildLoanShopDecision(player) {
         current.cash += 540;
         addLoanBalance(current, 860);
         addBadLoanMark(current, 1);
+        applyWellbeing(current, 4, "Fast-cash thrill");
       },
       aiScore: (current) => (current.cash < 120 ? 4 : -28),
       resultText: (current) => `${current.name} grabbed quick cash and stepped into a predatory loan.`,
@@ -3145,6 +3321,7 @@ function buildLoanShopDecision(player) {
       description: "Take no new debt and gain 1 knowledge instead.",
       effect: (current) => {
         current.knowledge += 1;
+        applyWellbeing(current, -1, "Willpower fatigue");
       },
       aiScore: (current) => 18 + (current.badLoan ? 8 : 0),
       resultText: (current) => `${current.name} walked away from risky borrowing and got smarter instead.`,
@@ -3160,6 +3337,7 @@ function buildLoanShopDecision(player) {
           current.loanBalance = Math.round(current.loanBalance * 0.7);
           clearBadLoanStatus(current, 1);
           current.refinanced = true;
+          applyWellbeing(current, 3, "Cleaned up a bad loan");
         },
         aiScore: () => 40,
         resultText: (current) => `${current.name} refinanced a bad loan and finally got room to breathe.`,
@@ -3188,6 +3366,7 @@ function buildRepairDecision(player) {
           if (!resolveBillingIssue(current, 90)) {
             clearDerogatoryMark(current, ["lateCardMarks", "lateLoanMarks", "transportDefaultMarks"]);
           }
+          applyWellbeing(current, -1, "Tedious admin cleanup");
         },
         aiScore: (current) => 18 + (current.creditScore < 750 ? 14 : 0),
         resultText: (current) => `${current.name} reviewed their report and tightened their profile.`,
@@ -3198,6 +3377,7 @@ function buildRepairDecision(player) {
         effect: (current) => {
           const paid = takeCash(current, 260);
           payHighestInterestDebt(current, paid);
+          applyWellbeing(current, -2, "Attacked a damaging balance");
         },
         aiScore: (current) => 14 + getUtilization(current) * 36,
         resultText: (current) => `${current.name} attacked a damaging balance and improved their profile.`,
@@ -3208,6 +3388,7 @@ function buildRepairDecision(player) {
         effect: (current) => {
           current.shields += 1;
           current.knowledge += 1;
+          applyWellbeing(current, 1, "Feeling a little safer");
         },
         aiScore: (current) => (current.shields === 0 ? 18 : 9),
         resultText: (current) => `${current.name} built more protection before the next curveball hit.`,
@@ -3240,6 +3421,7 @@ function buildOpportunityDecision(player) {
         description: "Collect $260 back thanks to strong credit and lower fees.",
         effect: (current) => {
           current.cash += 260;
+          applyWellbeing(current, 3, "Cash back relief");
         },
         aiScore: () => 14,
         resultText: (current) => `${current.name} used strong credit to avoid costly deposits and fees.`,
@@ -3250,6 +3432,7 @@ function buildOpportunityDecision(player) {
         effect: (current) => {
           const paid = takeCash(current, 320);
           payHighestInterestDebt(current, paid);
+          applyWellbeing(current, -2, "Heavy debt discipline");
         },
         aiScore: (current) => 12 + (getTotalDebt(current) > 2500 ? 8 : 0),
         resultText: (current) => `${current.name} turned strong credit into cleaner finances.`,
@@ -3265,6 +3448,7 @@ function buildOpportunityDecision(player) {
             current.growthAsset.passiveIncome += 55;
             current.growthAsset.value += 280;
           }
+          applyWellbeing(current, -1, "Reinvested energy");
         },
         aiScore: (current) => (current.cash > 1200 ? 16 : 3),
         resultText: (current) => `${current.name} doubled down on growth and future income.`,
@@ -3334,6 +3518,7 @@ const LIFE_EVENT_FACTORIES = [
           description: "Save money, stay focused, and avoid new utilization.",
           effect: (current) => {
             current.cash += 40;
+            applyWellbeing(current, -3, "Cracked-screen shame");
           },
           aiScore: () => 16,
           resultText: (current) => `${current.name} skipped the shiny upgrade and stayed disciplined.`,
@@ -3344,6 +3529,7 @@ const LIFE_EVENT_FACTORIES = [
           effect: (current) => {
             spendCashThenCard(current, 220);
             current.turnFlags.splurged = true;
+            applyWellbeing(current, 7, "New phone high");
           },
           aiScore: (current) => (current.cash > 2500 ? 6 : -8),
           resultText: (current) => `${current.name} upgraded the phone using cash.`,
@@ -3354,6 +3540,7 @@ const LIFE_EVENT_FACTORIES = [
           effect: (current) => {
             addCardBalance(current, 260);
             current.turnFlags.splurged = true;
+            applyWellbeing(current, 9, "Upgrade thrill, trouble later");
           },
           aiScore: () => -24,
           resultText: (current) => `${current.name} financed the phone and pushed utilization higher.`,
@@ -3374,6 +3561,7 @@ const LIFE_EVENT_FACTORIES = [
               current.billingErrorsResolved += 1;
             }
             current.knowledge += 1;
+            applyWellbeing(current, -1, "Call-queue hold music");
           },
           aiScore: () => 28,
           resultText: (current) => `${current.name} disputed the billing error and protected their credit.`,
@@ -3383,6 +3571,7 @@ const LIFE_EVENT_FACTORIES = [
           description: "Lose $90 now, but keep the problem small.",
           effect: (current) => {
             spendCashThenCard(current, 90);
+            applyWellbeing(current, -2, "Feeling ripped off");
           },
           aiScore: () => 8,
           resultText: (current) => `${current.name} paid the charge just to move on.`,
@@ -3393,6 +3582,7 @@ const LIFE_EVENT_FACTORIES = [
           effect: (current) => {
             addUnresolvedBillingMark(current, 1);
             addCardBalance(current, 90);
+            applyWellbeing(current, 2, "Avoidance relief");
           },
           aiScore: () => -20,
           resultText: (current) => `${current.name} ignored the billing error and let it hurt their finances.`,
@@ -3411,6 +3601,7 @@ const LIFE_EVENT_FACTORIES = [
           effect: (current) => {
             current.cash += 220;
             depositToEmergencyFund(current, 220);
+            applyWellbeing(current, -1, "Small dignity cost of help");
           },
           aiScore: (current) => (current.emergencyFund < 500 ? 22 : 10),
           resultText: (current) => `${current.name} used outside help to strengthen their emergency fund.`,
@@ -3422,6 +3613,7 @@ const LIFE_EVENT_FACTORIES = [
             current.cash += 220;
             const paid = takeCash(current, 220);
             payHighestInterestDebt(current, paid);
+            applyWellbeing(current, -1, "Small dignity cost of help");
           },
           aiScore: (current) => 14 + (getTotalDebt(current) > 3500 ? 8 : 0),
           resultText: (current) => `${current.name} used support to shrink debt instead of spending it.`,
@@ -3432,6 +3624,7 @@ const LIFE_EVENT_FACTORIES = [
           effect: (current) => {
             current.cash += 220;
             current.turnFlags.splurged = true;
+            applyWellbeing(current, 9, "Windfall splurge");
           },
           aiScore: () => -6,
           resultText: (current) => `${current.name} enjoyed the windfall right away.`,
@@ -3453,6 +3646,7 @@ const LIFE_EVENT_FACTORIES = [
               ...current.career,
               income: current.career.income + 70,
             };
+            applyWellbeing(current, -3, "Nights + weekends studying");
           },
           aiScore: (current) => 18 + (current.cash > 250 ? 6 : -4),
           resultText: (current) => `${current.name} invested in training and boosted future income.`,
@@ -3463,6 +3657,7 @@ const LIFE_EVENT_FACTORIES = [
           effect: (current) => {
             current.cash += 100;
             current.knowledge += 1;
+            applyWellbeing(current, -1, "Dignity cost of asking");
           },
           aiScore: () => 10,
           resultText: (current) => `${current.name} found a safer middle path with employer help.`,
@@ -3470,7 +3665,9 @@ const LIFE_EVENT_FACTORIES = [
         createOption({
           label: "Pass for Now",
           description: "No cost, no gain.",
-          effect: () => {},
+          effect: (current) => {
+            applyWellbeing(current, -2, "Regret for passing");
+          },
           aiScore: () => 4,
           resultText: (current) => `${current.name} passed on the training opportunity for now.`,
         }),
@@ -3496,6 +3693,7 @@ const CRISIS_FACTORIES = [
               spendCashThenCard(current, shortfall);
             }
             current.turnFlags.crisisHandled = true;
+            applyWellbeing(current, -3, "Emergency, even handled cleanly");
           },
           aiScore: (current) => 26 + (current.emergencyFund >= 320 ? 10 : -4),
           resultText: (current) => `${current.name} used the emergency fund to survive the medical bill.`,
@@ -3507,6 +3705,7 @@ const CRISIS_FACTORIES = [
             current.turnFlags.facedCrisis = true;
             addCardBalance(current, 360);
             current.turnFlags.crisisHandled = true;
+            applyWellbeing(current, -5, "Swiped the card under pressure");
           },
           aiScore: (current) => (current.emergencyFund < 150 ? 8 : -8),
           resultText: (current) => `${current.name} leaned on the credit card to absorb the medical emergency.`,
@@ -3518,6 +3717,7 @@ const CRISIS_FACTORIES = [
             current.turnFlags.facedCrisis = true;
             recordMissedPayment(current, "lateLoanMarks");
             addLoanBalance(current, 120);
+            applyWellbeing(current, -8, "Cascade of guilt and stress");
           },
           aiScore: () => -30,
           resultText: (current) => `${current.name} took the hit and missed a payment to survive the crisis.`,
@@ -3539,6 +3739,7 @@ const CRISIS_FACTORIES = [
             const remainder = 260 - fromEmergency;
             spendCashThenCard(current, remainder);
             current.turnFlags.crisisHandled = true;
+            applyWellbeing(current, -3, "Income shock, covered");
           },
           aiScore: (current) => 20 + (getSavings(current) > 300 ? 8 : 0),
           resultText: (current) => `${current.name} covered the income drop without falling behind.`,
@@ -3552,6 +3753,7 @@ const CRISIS_FACTORIES = [
               addCardBalance(current, 180);
             }
             current.turnFlags.crisisHandled = true;
+            applyWellbeing(current, -2, "Shield absorbed the worst");
           },
           aiScore: (current) => (current.shields > 0 ? 24 : 2),
           resultText: (current) => `${current.name} used protection to keep the setback from snowballing.`,
@@ -3564,6 +3766,7 @@ const CRISIS_FACTORIES = [
             addLoanBalance(current, 320);
             addBadLoanMark(current, 1);
             current.turnFlags.crisisHandled = true;
+            applyWellbeing(current, -6, "Predatory-loan dread");
           },
           aiScore: (current) => (current.cash < 150 ? 6 : -20),
           resultText: (current) => `${current.name} survived the income shock, but at the cost of new bad debt.`,
@@ -3587,6 +3790,7 @@ const CRISIS_FACTORIES = [
             spendCashThenCard(current, remainder);
             current.housingRisk = 0;
             current.turnFlags.crisisHandled = true;
+            applyWellbeing(current, -3, "Housing surprise handled");
           },
           aiScore: (current) => 20 + (current.housing ? 8 : 0),
           resultText: (current) => `${current.name} paid the housing surprise and kept stability intact.`,
@@ -3601,6 +3805,7 @@ const CRISIS_FACTORIES = [
             }
             current.housingRisk = 0;
             current.turnFlags.crisisHandled = true;
+            applyWellbeing(current, -2, "Shield softened the blow");
           },
           aiScore: (current) => (current.shields > 0 ? 22 : 4),
           resultText: (current) => `${current.name} used protection to keep the housing crisis from spreading.`,
@@ -3613,6 +3818,7 @@ const CRISIS_FACTORIES = [
             recordMissedPayment(current, "housingDefaultMarks");
             current.housingRisk += 1;
             addLoanBalance(current, 100);
+            applyWellbeing(current, -7, "Housing instability dread");
           },
           aiScore: () => -26,
           resultText: (current) => `${current.name} delayed the fix and let the housing crisis hurt their credit.`,
@@ -3628,6 +3834,7 @@ const SETBACK_FACTORIES = [
     artLabel: "Hard Luck",
     apply: (current) => {
       addCardBalance(current, 340);
+      applyWellbeing(current, -5, "Unexpected medical bill");
     },
     getBody: () =>
       `An unexpected medical bill landed on your card. Utilization jumped and your balance rose by ${formatMoney(340)}. That damage will pull against your score on the next credit recalculation.`,
@@ -3642,6 +3849,7 @@ const SETBACK_FACTORIES = [
     apply: (current) => {
       recordMissedPayment(current, "lateCardMarks");
       addCardBalance(current, 85);
+      applyWellbeing(current, -3, "Missed card payment");
     },
     getBody: () =>
       `You accidentally missed your credit card payment. Late fees added ${formatMoney(85)} to the balance and a real late-payment mark hit your history.`,
@@ -3656,6 +3864,7 @@ const SETBACK_FACTORIES = [
     apply: (current) => {
       recordMissedPayment(current, "lateLoanMarks");
       addLoanBalance(current, 125);
+      applyWellbeing(current, -4, "Missed loan payment dread");
     },
     getBody: () =>
       `You were stretched thin and missed a loan payment. Fees added ${formatMoney(125)} to what you owe and a late-loan mark was added to your history.`,
@@ -3670,6 +3879,7 @@ const SETBACK_FACTORIES = [
       recordMissedPayment(current);
       addUnresolvedBillingMark(current, 1);
       addCardBalance(current, 140);
+      applyWellbeing(current, -3, "Admin failure stress");
     },
     getBody: () =>
       `A utility bill slipped through the cracks and reported late. Another ${formatMoney(140)} hit your balances, and the late report added new derogatory damage.`,
@@ -3688,6 +3898,7 @@ function buildKnowledgeEffect(player) {
         if (!resolveBillingIssue(current, 90)) {
           clearDerogatoryMark(current, ["lateCardMarks", "lateLoanMarks", "unresolvedBillingMarks"]);
         }
+        applyWellbeing(current, 1, "Feeling informed");
       },
     },
     {
@@ -3696,6 +3907,7 @@ function buildKnowledgeEffect(player) {
       apply: (current) => {
         current.knowledge += 1;
         current.shields += 1;
+        applyWellbeing(current, 2, "Empowerment");
       },
     },
     {
@@ -3704,6 +3916,7 @@ function buildKnowledgeEffect(player) {
       apply: (current) => {
         const paid = takeCash(current, Math.min(120, current.cash));
         payHighestInterestDebt(current, paid);
+        applyWellbeing(current, -1, "Should-be-doing-more guilt");
       },
     },
     {
@@ -3712,6 +3925,7 @@ function buildKnowledgeEffect(player) {
       apply: (current) => {
         current.cash += 140;
         current.knowledge += 1;
+        applyWellbeing(current, 2, "Got a good deal");
       },
     },
   ];
@@ -3760,7 +3974,32 @@ async function offerDecision(player, decision) {
 
 function chooseAiOption(player, decision) {
   return decision.options.reduce((best, option) => {
-    const score = option.aiScore ? option.aiScore(player) : 0;
+    const baseScore = option.aiScore ? option.aiScore(player) : 0;
+    let wellbeingAdjustment = 0;
+
+    try {
+      const clone = clonePlayerState(player);
+      option.effect(clone);
+      const projectedWellbeing = clone.wellbeing;
+      const wellbeingDelta = projectedWellbeing - player.wellbeing;
+
+      // Mild lift for options that recover when already below 40.
+      if (player.wellbeing < 40 && wellbeingDelta > 0) {
+        wellbeingAdjustment += wellbeingDelta * 0.6;
+      }
+      // Graduated penalty for pushing below 35.
+      if (projectedWellbeing < 35) {
+        wellbeingAdjustment -= (35 - projectedWellbeing) * 0.7;
+      }
+      // Hard avoidance — don't voluntarily crash into burnout.
+      if (projectedWellbeing < 15 && player.wellbeing >= 15) {
+        wellbeingAdjustment -= 12;
+      }
+    } catch (err) {
+      // Effect couldn't be simulated cleanly — fall back to base score.
+    }
+
+    const score = baseScore + wellbeingAdjustment;
     if (!best || score > best.score) {
       return { option, score };
     }
@@ -3867,6 +4106,7 @@ async function handleSpace(player, space) {
   checkMissionCompletion(player);
   applyThresholdUnlocks(player);
   checkWinner(player);
+  await maybeResolveBurnout(player);
   await flushPlayerNotices(player);
 }
 
@@ -4003,6 +4243,38 @@ function renderBoard() {
   }).join("");
 }
 
+function renderWellbeingBar(player) {
+  const value = Math.round(player.wellbeing);
+  const tier = getWellbeingTier(value);
+  const fillPercent = Math.max(0, Math.min(100, value));
+  const delta = player.lastWellbeingDelta || 0;
+  const reason = player.lastWellbeingReason;
+  let deltaMarkup = "";
+  if (delta !== 0 && reason) {
+    const sign = delta > 0 ? "+" : "";
+    const deltaDir = delta > 0 ? "up" : "down";
+    deltaMarkup = `<span class="wellbeing-delta ${deltaDir}">${sign}${delta} · ${reason}</span>`;
+  }
+  const tierCopy = {
+    stressed: "Stressed — you're paying a $25 stress tax each turn and will hit burnout below 15.",
+    strained: "Strained — one more bad turn could drop you into Stressed.",
+    steady: "Steady — no penalty, no bonus.",
+    flowing: "Flowing — three turns at 75+ grants a Knowledge point.",
+  };
+  return `
+    <div class="wellbeing-bar wellbeing-tier-${tier.key}" title="${tierCopy[tier.key]}">
+      <div class="wellbeing-bar-head">
+        <span class="wellbeing-bar-label">Wellbeing</span>
+        <span class="wellbeing-bar-tier">${value} · ${tier.label}</span>
+      </div>
+      <div class="wellbeing-bar-track">
+        <div class="wellbeing-bar-fill" style="width:${fillPercent}%;"></div>
+      </div>
+      ${deltaMarkup ? `<div class="wellbeing-bar-foot">${deltaMarkup}</div>` : ""}
+    </div>
+  `;
+}
+
 function renderTurnPanel() {
   if (!state.players.length) {
     elements.turnPanel.innerHTML = `
@@ -4068,6 +4340,10 @@ function renderTurnPanel() {
         <span>Debt</span>
         <strong>${formatMoney(getTotalDebt(player))}</strong>
       </div>
+      <div class="turn-stat-pill wellbeing-pill wellbeing-tier-${getWellbeingTier(player.wellbeing).key}">
+        <span>Wellbeing</span>
+        <strong>${Math.round(player.wellbeing)} · ${getWellbeingTier(player.wellbeing).label}</strong>
+      </div>
       <div class="turn-stat-pill">
         <span>Stage</span>
         <strong>${getLifeStage(player)}</strong>
@@ -4077,6 +4353,7 @@ function renderTurnPanel() {
         <strong>${state.lastDie ?? "--"}</strong>
       </div>
     </div>
+    ${renderWellbeingBar(player)}
     ${state.lastRollNote ? `<p class="turn-inline-note">${state.lastRollNote}</p>` : ""}
     ${creditCheckNote ? `<div class="credit-check-banner ${creditCheckBadgeClass}">${creditCheckNote}</div>` : ""}
     ${thinFileNote ? `<p class="turn-inline-note">${thinFileNote}</p>` : ""}
@@ -4214,6 +4491,7 @@ function renderPlayersPanel() {
                 <span><strong>${formatMoney(player.emergencyFund)}</strong> emergency</span>
                 <span><strong>${formatMoney(getTotalDebt(player))}</strong> debt</span>
                 <span><strong>${countCompletedGoals(player)} / 6</strong> goals</span>
+                <span class="player-summary-wellbeing wellbeing-tier-${getWellbeingTier(player.wellbeing).key}"><strong>${Math.round(player.wellbeing)}</strong> ${getWellbeingTier(player.wellbeing).label}</span>
               </div>
 
               <div class="player-tags">
