@@ -345,46 +345,45 @@ h3 {
 
 .hero-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
   align-content: start;
 }
 
 .hero-stat-card {
-  padding: 14px 18px;
-  border-radius: 20px;
-  background: rgba(255, 249, 236, 0.16);
-  border: 2px solid rgba(255, 249, 236, 0.42);
-  min-width: 120px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255, 249, 236, 0.1);
+  border: 1px solid rgba(255, 249, 236, 0.28);
+  min-width: 110px;
 }
 
-/* The round card is the single most-asked "what am I looking at" stat in the
-   game. Bump its prominence above the leader card so testers stop searching. */
-.hero-stat-card.hero-stat-round {
-  background: rgba(214, 168, 60, 0.22);
-  border-color: rgba(214, 168, 60, 0.62);
+/* Round card: subtle accent on the label only — the value carries the
+   visual weight, not the card background. Quieter than the gold tint
+   while still distinguishing it from the leader card. */
+.hero-stat-card.hero-stat-round .hero-stat-label {
+  color: rgba(214, 168, 60, 0.95);
 }
 
 .hero-stat-label {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   font-weight: 700;
+  color: rgba(255, 249, 236, 0.74);
 }
 
 .hero-stat-value {
-  font-size: 1.55rem;
+  font-size: 1.45rem;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: 0.01em;
 }
 
 .hero-stat-card.hero-stat-round .hero-stat-value {
-  font-size: 1.85rem;
-  color: #fff7e1;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+  font-size: 1.65rem;
 }
 
 .main-layout {
@@ -426,7 +425,11 @@ h3 {
 
 .board-center {
   position: absolute;
-  inset: 14%;
+  /* 100%/7 = ~14.29% per row. Adding gap of 10px means each row band is a
+     bit larger. Inset 17% keeps the center card cleanly inside the inner
+     5x5 area (rows 2-6, columns 2-6), so it can't overlap perimeter
+     tiles like Goal/Mission. */
+  inset: 17%;
   pointer-events: auto;
 }
 
@@ -515,72 +518,76 @@ h3 {
   font-size: 0.8rem;
 }
 
+/* Minimal board tile — one quiet category accent (a thin left rule + a
+   small dot in the badge), centered title, restrained background. The
+   earlier triple-coloring (top stripe + tile tint + colored badge) was
+   competing with the text and making the perimeter feel busy. */
 .board-space {
   position: relative;
-  border: var(--border);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(247, 240, 223, 0.92));
+  border: 1px solid rgba(31, 43, 58, 0.16);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbf3df, #f1e6c8);
   overflow: hidden;
-  padding: 12px 10px 10px;
+  padding: 14px 10px 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   min-height: 0;
+  box-shadow: 0 2px 4px rgba(31, 43, 58, 0.08);
+  text-align: center;
 }
 
+/* Single thin left-edge rule in the category color. Quiet but readable. */
 .board-space::before {
   content: "";
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 22px;
+  inset: 0 auto 0 0;
+  width: 4px;
   background: var(--space-accent, var(--gold));
-  border-bottom: 2px solid rgba(31, 43, 58, 0.75);
-}
-
-/* Tint the entire square subtly with its category color so the board reads
-   at a glance. The tint is gentle so the cream paper aesthetic stays. */
-.board-space {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--space-accent, var(--gold)) 14%, rgba(255, 255, 255, 0.56)), rgba(247, 240, 223, 0.94));
 }
 
 .board-space.active {
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: 0 18px 26px rgba(31, 43, 58, 0.18);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold), 0 8px 18px rgba(31, 43, 58, 0.16);
+  background: linear-gradient(180deg, #fff8e2, #f6ebc8);
 }
 
 .board-space.start-space {
-  background:
-    radial-gradient(circle at 65% 30%, rgba(255, 255, 255, 0.86), transparent 35%),
-    linear-gradient(180deg, rgba(247, 240, 223, 0.92), rgba(229, 217, 181, 0.96));
+  background: linear-gradient(180deg, #fbf3df, #ecdfb7);
 }
 
 .space-badge {
-  margin-top: 14px;
+  margin: 0 auto;
   display: inline-flex;
-  align-self: flex-start;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--space-accent, var(--gold)) 32%, rgba(255, 255, 255, 0.85));
-  color: rgba(31, 43, 58, 0.92);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  color: rgba(31, 43, 58, 0.55);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  border: 1px solid rgba(31, 43, 58, 0.18);
+  border: none;
+}
+
+.space-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--space-accent, var(--gold));
+  flex: 0 0 auto;
 }
 
 .space-name {
-  margin: 8px 0 4px;
-  font-size: 1.02rem;
-  line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: 0.005em;
-  /* No hyphens/break-word: let words wrap only at spaces. The two
-     previously-too-long labels ("Emergency Fund", "Neighborhood Upgrade")
-     were renamed to "Safety Net" and "Upgrade Home" so the widest label
-     now fits comfortably without mid-word breaks. */
+  margin: 6px 0 0;
+  font-size: 1.05rem;
+  line-height: 1.18;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: "Georgia", "Times New Roman", serif;
+  /* No hyphens/break-word: let words wrap only at spaces. */
 }
 
 /* Legacy class — .space-brief no longer rendered on tiles; active-space
@@ -597,40 +604,58 @@ h3 {
   align-items: flex-end;
 }
 
-.space-index {
-  font-size: 0.84rem;
-  color: rgba(31, 43, 58, 0.62);
-  font-weight: 800;
+/* Footer row: index left, tokens right. The footer is hidden via display:none
+   when the tile has no tokens AND no active state — keeps quiet tiles quiet. */
+.space-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
 }
 
+.space-index {
+  font-size: 0.7rem;
+  color: rgba(31, 43, 58, 0.4);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* Tokens stack like overlapping coins instead of wrapping. This fixes the
+   clipping issue where 3 tokens at the same space wrapped out of frame. */
 .token-stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
-  min-height: 44px;
+  display: inline-flex;
+  flex-direction: row;
+  gap: 0;
+  min-height: 0;
+  padding-right: 2px;
 }
 
 .token {
-  width: 42px;
-  height: 42px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.96);
+  border: 2px solid #fbf3df;
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.7rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 12px rgba(31, 43, 58, 0.32);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 2px 4px rgba(31, 43, 58, 0.28);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.28);
+  flex: 0 0 auto;
+}
+
+.token + .token {
+  margin-left: -10px;
 }
 
 .token.current-token {
-  transform: scale(1.18);
-  box-shadow: 0 0 0 3px rgba(247, 240, 223, 0.95), 0 0 0 7px rgba(31, 68, 102, 0.42), 0 6px 14px rgba(31, 43, 58, 0.36);
   z-index: 2;
   position: relative;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(214, 168, 60, 0.4), 0 2px 6px rgba(31, 43, 58, 0.34);
 }
 
 .sidebar {
@@ -902,16 +927,19 @@ h3 {
 
 .roadmap-copy strong {
   display: block;
-  font-size: 1rem;
+  font-size: 1.08rem;
   line-height: 1.2;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: "Georgia", "Times New Roman", serif;
 }
 
 .roadmap-copy span {
   display: block;
-  margin-top: 4px;
+  margin-top: 6px;
   color: var(--muted);
-  font-size: 0.86rem;
-  line-height: 1.35;
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
 
 .roadmap-step.complete .roadmap-copy strong {
@@ -1461,7 +1489,7 @@ button.credit-flash-card {
   }
 
   .board-center {
-    inset: 14%;
+    inset: 17%;
   }
 
   .center-card {
@@ -1481,28 +1509,19 @@ button.credit-flash-card {
   }
 
   .space-name {
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     line-height: 1.15;
   }
 
   .token {
-    width: 30px;
-    height: 30px;
-    font-size: 0.72rem;
+    width: 22px;
+    height: 22px;
+    font-size: 0.62rem;
+    border-width: 2px;
   }
 
-  .token-stack {
-    min-height: 32px;
-  }
-
-  .token {
-    width: 30px;
-    height: 30px;
-    font-size: 0.72rem;
-  }
-
-  .token-stack {
-    min-height: 32px;
+  .token + .token {
+    margin-left: -8px;
   }
 
   .turn-metrics {
