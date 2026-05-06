@@ -1,3 +1,11 @@
+<p align="center">
+  <img src="image.png" alt="Credit" width="400">
+</p>
+
+<p align="center">
+  <em>Climb your way to financial freedom.</em>
+</p>
+
 # Credit Climb
 
 A browser-based multiplayer board game teaching credit scores, debt management, and the slow climb to financial stability. Built as an individual project for ED 315 — Gamifying Learning at Boston University Wheelock.
