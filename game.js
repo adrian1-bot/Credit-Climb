@@ -641,7 +641,66 @@ const elements = {
   modalShell: document.getElementById("modal-shell"),
   modalCard: document.getElementById("modal-card"),
   creditFlash: document.getElementById("credit-flash"),
+  onboardingShell: document.getElementById("onboarding-shell"),
+  onboardingClose: document.getElementById("onboarding-close"),
+  onboardingConfirm: document.getElementById("onboarding-confirm"),
+  toolbarHelp: document.getElementById("toolbar-help"),
 };
+
+// Onboarding overlay — fires once per device on first round, can be reopened
+// via the ? button in the toolbar. Storage key is namespaced so it doesn't
+// collide with any other browser state we might add later.
+const ONBOARDING_STORAGE_KEY = "credit-climb-onboarding-seen-v1";
+
+function hasSeenOnboarding() {
+  try {
+    return window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === "1";
+  } catch (err) {
+    // Storage may be blocked (private browsing, etc.) — treat as unseen so
+    // the modal shows. It won't be persisted, but it'll behave consistently
+    // for the duration of the session.
+    return false;
+  }
+}
+
+function markOnboardingSeen() {
+  try {
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+  } catch (err) {
+    // Same fallback as above — silently ignore.
+  }
+}
+
+function showOnboardingModal() {
+  if (!elements.onboardingShell) return;
+  elements.onboardingShell.classList.remove("hidden");
+  elements.onboardingShell.setAttribute("aria-hidden", "false");
+}
+
+function hideOnboardingModal({ persist = true } = {}) {
+  if (!elements.onboardingShell) return;
+  elements.onboardingShell.classList.add("hidden");
+  elements.onboardingShell.setAttribute("aria-hidden", "true");
+  if (persist) markOnboardingSeen();
+  // Drop the help-pulse animation on the ? button after first dismissal so
+  // it doesn't keep drawing the eye on every reopen.
+  if (elements.toolbarHelp) {
+    elements.toolbarHelp.classList.remove("help-pulse");
+  }
+}
+
+function maybeShowFirstRunOnboarding() {
+  if (hasSeenOnboarding()) {
+    // Subtle nudge for repeat players — pulse the ? once so they remember
+    // it exists. No modal, just a hint.
+    if (elements.toolbarHelp) {
+      elements.toolbarHelp.classList.add("help-pulse");
+      setTimeout(() => elements.toolbarHelp && elements.toolbarHelp.classList.remove("help-pulse"), 4000);
+    }
+    return;
+  }
+  showOnboardingModal();
+}
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -829,6 +888,7 @@ function sanitizeModalForNetwork(modal) {
       body: modal.decision.body,
       artId: modal.decision.artId,
       artLabel: modal.decision.artLabel,
+      profileVariant: modal.decision.profileVariant || null,
       options: modal.decision.options.map((option) => ({
         label: option.label,
         description: option.description,
@@ -2084,6 +2144,9 @@ function startGame(humanNames, aiCount) {
   });
 
   renderAll();
+  // Fire onboarding overlay on first-time players. Repeat players just see a
+  // brief pulse on the ? button so they can re-open it on demand.
+  maybeShowFirstRunOnboarding();
   void beginTurn();
 }
 
@@ -3081,6 +3144,32 @@ function ensureDecision(decision) {
     artId: decision.artId || "generic",
     artLabel: decision.artLabel,
     options: decision.options.slice(0, 3),
+    // Optional metadata: when a body comes from a profile-specific variant
+    // (selectByProfile picked the player's background instead of `default`),
+    // we surface that in the modal as a small "Your profile shaped this
+    // prompt" badge. This makes the equity claim of the design visible at
+    // the moment a player is reading the prompt.
+    profileVariant: decision.profileVariant || null,
+  };
+}
+
+// Returns the profile-specific variant if one exists for this player's
+// background, otherwise falls back to `default`. Used by prompt bodies that
+// read with genuinely different emotional weight depending on who's playing.
+function selectByProfile(player, variants) {
+  const profileId = player && player.background && player.background.id;
+  const profileName = player && player.background && player.background.name;
+  if (profileId && Object.prototype.hasOwnProperty.call(variants, profileId)) {
+    return {
+      body: variants[profileId],
+      fromProfile: true,
+      profileName: profileName || null,
+    };
+  }
+  return {
+    body: variants.default,
+    fromProfile: false,
+    profileName: profileName || null,
   };
 }
 
@@ -3168,86 +3257,108 @@ function buildCreditDecision(player) {
 }
 
 function buildLifestyleDecision(player) {
+  const variant = selectByProfile(player, {
+    default:
+      "It's Sana's birthday dinner Thursday. The group chat already picked the place — the one everyone's been posting about. Entrees start at $38 and you've seen how their tables order.",
+    scholarship:
+      "It's Sana's birthday dinner Thursday. You haven't said yes to a group dinner since October. The place is the one everyone's been posting about — entrees start at $38.",
+    "medical-burden":
+      "It's Sana's birthday dinner Thursday. Last time the group went out, you were still making payments on the ER bill. Entrees start at $38.",
+    "family-support":
+      "It's Sana's birthday dinner Thursday. The group chat picked the place — entrees start at $38. You could text mom. You usually do.",
+  });
   return ensureDecision({
-    title: "Shopping Trip",
-    body: "Bags and sneakers are on sale. Do you spend or stay disciplined?",
+    title: "Thursday Dinner",
+    body: variant.body,
+    profileVariant: variant.fromProfile ? variant.profileName : null,
     artId: "shopping",
     options: [
       createOption({
-        label: "Skip the Spree",
-        description: "Keep your budget steady and move $80 into your future.",
+        label: "Stay in this time",
+        description: "+$45 stayed in your account. You watch the stories tomorrow morning.",
         effect: (current) => {
-          current.cash += 80;
-          applyWellbeing(current, -2, "Skipped the spree");
+          current.cash += 45;
+          applyWellbeing(current, -4, "Sat this one out");
         },
-        aiScore: (current) => 16 + (current.creditScore < 750 ? 8 : 0),
-        resultText: (current) => `${current.name} skipped the spree and kept the budget in line.`,
+        aiScore: (current) => 14 + (current.creditScore < 750 ? 8 : 0),
+        resultText: (current) => `${current.name} stayed in for Sana's birthday and kept the cash.`,
       }),
       createOption({
-        label: "Buy It With Cash",
-        description: "Spend $180 from cash for a short-term treat.",
+        label: "Go, order carefully",
+        description: "Split an app, water, skip dessert. You're there.",
         effect: (current) => {
-          spendCashThenCard(current, 180);
+          spendCashThenCard(current, 120);
           current.turnFlags.splurged = true;
-          applyWellbeing(current, 6, "Shopping treat");
+          applyWellbeing(current, 3, "Showed up without going overboard");
         },
-        aiScore: (current) => (current.cash > 3500 ? 4 : -10),
-        resultText: (current) => `${current.name} treated themselves, but nothing hit the card.`,
+        aiScore: (current) => (current.cash > 3500 ? 6 : -8),
+        resultText: (current) => `${current.name} made it to dinner and kept the bill small.`,
       }),
       createOption({
-        label: "Put It on the Card",
-        description: "Add $260 to your card balance and raise utilization.",
+        label: "Match the table",
+        description: "Order what they're ordering. Cover a round. On the card.",
         effect: (current) => {
-          addCardBalance(current, 260);
+          addCardBalance(current, 340);
           current.turnFlags.splurged = true;
-          applyWellbeing(current, 8, "Swiped for the thrill");
+          applyWellbeing(current, 10, "Birthday-dinner energy");
         },
         aiScore: (current) => -26 - getUtilization(current) * 32,
-        resultText: (current) => `${current.name} swiped now and left future-them with more utilization.`,
+        resultText: (current) => `${current.name} covered a round and put the night on the card.`,
       }),
     ],
   });
 }
 
 function buildSavingsDecision(player) {
+  const variant = selectByProfile(player, {
+    default:
+      "Your paycheck came in $280 over expected — overtime from last weekend's shifts. Rent's not due for ten days.",
+    scholarship:
+      "Your paycheck came in $280 over expected — overtime from last weekend's shifts. Tuition's covered. Everything else isn't.",
+    "no-safety-net":
+      "Your paycheck came in $280 over expected. Last month rent was close. This kind of cushion doesn't come often.",
+    "medical-burden":
+      "Your paycheck came in $280 over expected — overtime from last weekend's shifts. The ER bill from February still has a balance on it.",
+  });
   return ensureDecision({
-    title: "Savings Sprint",
-    body: "Build a cushion, cut debt, or keep cash flexible.",
+    title: "Overtime Paycheck",
+    body: variant.body,
+    profileVariant: variant.fromProfile ? variant.profileName : null,
     artId: "savings",
     options: [
       createOption({
-        label: "Fund the Emergency Buffer",
-        description: "Move $220 from cash into emergency savings.",
+        label: "Park it in savings",
+        description: "$220 into the emergency fund. You watch the balance tick up.",
         effect: (current) => {
           const moved = depositToEmergencyFund(current, 220);
           if (moved < 220) {
             addCardBalance(current, 220 - moved);
           }
-          applyWellbeing(current, -1, "Sent cash to emergency fund");
+          applyWellbeing(current, -2, "Locked the windfall away");
         },
         aiScore: (current) => 12 + (current.emergencyFund < 500 ? 18 : 4) + (current.shields === 0 ? 6 : 0),
-        resultText: (current) => `${current.name} built more emergency savings for the next storm.`,
+        resultText: (current) => `${current.name} parked the overtime into emergency savings.`,
       }),
       createOption({
-        label: "Pay Down Debt",
-        description: "Use $250 to hit your highest-interest balance.",
+        label: "Throw it at the card",
+        description: "$250 straight at your highest-interest balance.",
         effect: (current) => {
           const paid = takeCash(current, 250);
           payHighestInterestDebt(current, paid);
-          applyWellbeing(current, -1, "Paid down debt");
+          applyWellbeing(current, -1, "Made the balance smaller");
         },
         aiScore: (current) => 10 + getUtilization(current) * 30 + (getTotalDebt(current) > 4000 ? 15 : 0),
-        resultText: (current) => `${current.name} used this breather to shrink debt instead of spending.`,
+        resultText: (current) => `${current.name} sent the overtime at their highest-interest balance.`,
       }),
       createOption({
-        label: "Keep Cash Flexible",
-        description: "Hold the cash now and collect a smaller $90 side gig bonus.",
+        label: "Let the week breathe",
+        description: "+$90 side-gig bonus stacks on top. Nothing goes to savings, nothing to debt.",
         effect: (current) => {
           current.cash += 90;
-          applyWellbeing(current, 2, "Kept cash on hand");
+          applyWellbeing(current, 4, "Kept the paycheck liquid");
         },
         aiScore: (current) => (current.cash < 450 ? 18 : 2),
-        resultText: (current) => `${current.name} stayed flexible and picked up extra cash instead.`,
+        resultText: (current) => `${current.name} kept the paycheck loose and let the week breathe.`,
       }),
     ],
   });
@@ -3776,46 +3887,58 @@ function buildFreedomDecision(player) {
 }
 
 const LIFE_EVENT_FACTORIES = [
-  (player) =>
-    ensureDecision({
-      title: "Phone Upgrade",
-      body: "Your phone still works. Upgrade now or keep the cash?",
+  (player) => {
+    const variant = selectByProfile(player, {
+      default:
+        "Your screen cracked again last week — the hairline from September finally spread. Three people in your group chat have the new model. It drops Friday.",
+      scholarship:
+        "Your screen cracked again last week. Three people in your group chat have the new model. Your phone is also your laptop.",
+      "no-safety-net":
+        "Your screen cracked again last week. Three people in your group chat have the new model. If this one dies completely, there's no backup.",
+      "family-support":
+        "Your screen cracked again last week. Three people in your group chat have the new model. Dad already offered to send his old one.",
+    });
+    return ensureDecision({
+      title: "Screen Cracked",
+      body: variant.body,
+      profileVariant: variant.fromProfile ? variant.profileName : null,
       artId: "phone",
       options: [
         createOption({
-          label: "Keep the Old Phone",
-          description: "Save money, stay focused, and avoid new utilization.",
+          label: "Tape the cracks",
+          description: "+$35 cash. Tap around the broken corner like you've been doing.",
           effect: (current) => {
-            current.cash += 40;
-            applyWellbeing(current, -3, "Cracked-screen shame");
+            current.cash += 35;
+            applyWellbeing(current, -4, "Cracked-glass daily reminder");
           },
           aiScore: () => 16,
-          resultText: (current) => `${current.name} skipped the shiny upgrade and stayed disciplined.`,
+          resultText: (current) => `${current.name} lived with the cracks and kept the cash.`,
         }),
         createOption({
-          label: "Buy It With Cash",
-          description: "Spend $220 now and enjoy the upgrade without debt.",
+          label: "Buy a refurb",
+          description: "-$220 cash. A mid-tier refurb works, but it isn't the one everyone else has.",
           effect: (current) => {
             spendCashThenCard(current, 220);
             current.turnFlags.splurged = true;
-            applyWellbeing(current, 7, "New phone high");
+            applyWellbeing(current, 4, "Got a phone that works");
           },
           aiScore: (current) => (current.cash > 2500 ? 6 : -8),
-          resultText: (current) => `${current.name} upgraded the phone using cash.`,
+          resultText: (current) => `${current.name} grabbed a refurb and quieted the problem.`,
         }),
         createOption({
-          label: "Finance It on the Card",
-          description: "Add $260 to card balance and raise utilization.",
+          label: "Finance the new one",
+          description: "+$340 card balance. In the group photo tomorrow.",
           effect: (current) => {
-            addCardBalance(current, 260);
+            addCardBalance(current, 340);
             current.turnFlags.splurged = true;
-            applyWellbeing(current, 9, "Upgrade thrill, trouble later");
+            applyWellbeing(current, 9, "New phone, back in the group");
           },
           aiScore: () => -24,
-          resultText: (current) => `${current.name} financed the phone and pushed utilization higher.`,
+          resultText: (current) => `${current.name} financed the new phone and joined the group photo.`,
         }),
       ],
-    }),
+    });
+  },
   (player) =>
     ensureDecision({
       title: "Billing Error",
@@ -3858,90 +3981,114 @@ const LIFE_EVENT_FACTORIES = [
         }),
       ],
     }),
-  (player) =>
-    ensureDecision({
-      title: "Unexpected Support",
-      body: "A mentor or relative offers help. Where should it go?",
+  (player) => {
+    const variant = selectByProfile(player, {
+      default:
+        "An envelope came from your uncle — $220 in cash and a note that says 'Saw your last text. This might help. No strings.'",
+      "family-support":
+        "An envelope came from your aunt — $220 and a note that says 'for whatever.' She sends these sometimes. You haven't told her things are tight.",
+      "no-safety-net":
+        "An envelope came from your uncle — $220 and a note: 'Saw your last text. This might help.' You didn't tell him things were bad.",
+      "medical-burden":
+        "An envelope came from your cousin — $220 and a note: 'Heard about the bill. Not a loan.' You'd written it off a month ago.",
+    });
+    return ensureDecision({
+      title: "Envelope From Family",
+      body: variant.body,
+      profileVariant: variant.fromProfile ? variant.profileName : null,
       artId: "support",
       options: [
         createOption({
-          label: "Build Savings",
-          description: "Gain $220 and move it straight into emergency savings.",
+          label: "All of it into savings",
+          description: "$220 to the emergency fund. The money isn't yours to touch anymore.",
           effect: (current) => {
             current.cash += 220;
             depositToEmergencyFund(current, 220);
-            applyWellbeing(current, -1, "Small dignity cost of help");
+            applyWellbeing(current, -2, "Locked it away fast");
           },
           aiScore: (current) => (current.emergencyFund < 500 ? 22 : 10),
-          resultText: (current) => `${current.name} used outside help to strengthen their emergency fund.`,
+          resultText: (current) => `${current.name} moved the gift straight into emergency savings.`,
         }),
         createOption({
-          label: "Pay Down Debt",
-          description: "Get $220 and throw it at your highest-interest balance.",
+          label: "Hit the card with it",
+          description: "$220 straight at your highest-interest balance.",
           effect: (current) => {
             current.cash += 220;
             const paid = takeCash(current, 220);
             payHighestInterestDebt(current, paid);
-            applyWellbeing(current, -1, "Small dignity cost of help");
+            applyWellbeing(current, -1, "Used the help to shrink debt");
           },
           aiScore: (current) => 14 + (getTotalDebt(current) > 3500 ? 8 : 0),
-          resultText: (current) => `${current.name} used support to shrink debt instead of spending it.`,
+          resultText: (current) => `${current.name} put the envelope toward their highest-interest balance.`,
         }),
         createOption({
-          label: "Treat Yourself",
-          description: "Pocket $220, but the discipline streak ends.",
+          label: "Let it be money",
+          description: "+$220 cash. You already know what for.",
           effect: (current) => {
             current.cash += 220;
             current.turnFlags.splurged = true;
-            applyWellbeing(current, 9, "Windfall splurge");
+            applyWellbeing(current, 9, "Windfall stayed in your wallet");
           },
           aiScore: () => -6,
-          resultText: (current) => `${current.name} enjoyed the windfall right away.`,
+          resultText: (current) => `${current.name} kept the envelope in their wallet.`,
         }),
       ],
-    }),
-  (player) =>
-    ensureDecision({
-      title: "Training Opportunity",
-      body: "A short program could raise your income. Do you invest?",
+    });
+  },
+  (player) => {
+    const variant = selectByProfile(player, {
+      default:
+        "The certification prep course starts next weekend. Six Saturdays, $180, and the exam is in January. Half your cohort already signed up.",
+      scholarship:
+        "The certification prep course starts next weekend. Six Saturdays, $180, exam in January. Your scholarship covers tuition — not this.",
+      "no-safety-net":
+        "The certification prep course starts next weekend. Six Saturdays, $180, exam in January. $180 is the cushion between you and rent.",
+      "mentor-network":
+        "The certification prep course starts next weekend. Your mentor mentioned it at your last check-in — 'this is the one, if you can swing it.' Six Saturdays, $180, exam in January.",
+    });
+    return ensureDecision({
+      title: "Certification Course",
+      body: variant.body,
+      profileVariant: variant.fromProfile ? variant.profileName : null,
       artId: "training",
       options: [
         createOption({
-          label: "Take the Course",
-          description: "Spend $180 now and increase your income by $70 each turn.",
+          label: "Sign up tonight",
+          description: "$180 tuition. Weekends gone until December. Passing the exam bumps your paycheck.",
           effect: (current) => {
             spendCashThenCard(current, 180);
             current.career = {
               ...current.career,
               income: current.career.income + 70,
             };
-            applyWellbeing(current, -3, "Nights + weekends studying");
+            applyWellbeing(current, -4, "Saturdays gone");
           },
           aiScore: (current) => 18 + (current.cash > 250 ? 6 : -4),
-          resultText: (current) => `${current.name} invested in training and boosted future income.`,
+          resultText: (current) => `${current.name} signed up for the certification and handed over their Saturdays.`,
         }),
         createOption({
-          label: "Ask for Employer Help",
-          description: "Gain $100 now and 1 knowledge, but no income bump.",
+          label: "Ask your manager first",
+          description: "Company covers $100 of it, +1 knowledge. Your income stays flat.",
           effect: (current) => {
             current.cash += 100;
             current.knowledge += 1;
             applyWellbeing(current, -1, "Dignity cost of asking");
           },
           aiScore: () => 10,
-          resultText: (current) => `${current.name} found a safer middle path with employer help.`,
+          resultText: (current) => `${current.name} asked the company to chip in and took the safer path.`,
         }),
         createOption({
-          label: "Pass for Now",
-          description: "No cost, no gain.",
+          label: "Sit this cycle out",
+          description: "No cost. No income bump. Three classmates pass the exam in January.",
           effect: (current) => {
-            applyWellbeing(current, -2, "Regret for passing");
+            applyWellbeing(current, -3, "Watched from the sidelines");
           },
-          aiScore: () => 4,
-          resultText: (current) => `${current.name} passed on the training opportunity for now.`,
+          aiScore: () => 2,
+          resultText: (current) => `${current.name} sat this certification cycle out.`,
         }),
       ],
-    }),
+    });
+  },
 ];
 
 const CRISIS_FACTORIES = [
@@ -4475,7 +4622,7 @@ function renderHeroStats() {
   const leaderScore = leader ? getCompositeScore(leader).totalDisplay : null;
 
   elements.heroStats.innerHTML = `
-    <div class="hero-stat-card">
+    <div class="hero-stat-card hero-stat-round">
       <span class="hero-stat-label">Round</span>
       <span class="hero-stat-value">${Math.min(state.round, TURN_CAP)} / ${TURN_CAP}</span>
     </div>
@@ -5279,6 +5426,12 @@ function renderModal() {
     : "";
   elements.modalShell.classList.remove("hidden");
   elements.modalShell.setAttribute("aria-hidden", "false");
+  // Profile-aware badge: when the prompt copy was selected by the player's
+  // background (not the default copy), surface that fact so the equity
+  // claim of the design is visible in the moment a choice is being made.
+  const profileBadge = decision.profileVariant
+    ? `<span class="profile-variant-badge" title="The wording you're seeing was written for the ${decision.profileVariant} profile.">Your profile shaped this prompt · ${decision.profileVariant}</span>`
+    : "";
   elements.modalCard.innerHTML = `
     <div
       class="modal-hero"
@@ -5287,6 +5440,7 @@ function renderModal() {
       <div class="modal-copy">
         <p class="modal-kicker">${art.label}</p>
         <h2>${decision.title}</h2>
+        ${profileBadge}
         <p>${decision.body}</p>
       </div>
       <div class="modal-art">
@@ -5550,6 +5704,27 @@ function initialize() {
   if (toolbarLeave) {
     toolbarLeave.addEventListener("click", () => {
       leaveLiveRoom();
+    });
+  }
+
+  // Onboarding wiring — ? button reopens, close + confirm dismiss + persist
+  if (elements.toolbarHelp) {
+    elements.toolbarHelp.addEventListener("click", () => {
+      showOnboardingModal();
+    });
+  }
+  if (elements.onboardingClose) {
+    elements.onboardingClose.addEventListener("click", () => hideOnboardingModal({ persist: true }));
+  }
+  if (elements.onboardingConfirm) {
+    elements.onboardingConfirm.addEventListener("click", () => hideOnboardingModal({ persist: true }));
+  }
+  if (elements.onboardingShell) {
+    // Click on the dim backdrop (not the card itself) closes the modal.
+    elements.onboardingShell.addEventListener("click", (event) => {
+      if (event.target === elements.onboardingShell) {
+        hideOnboardingModal({ persist: true });
+      }
     });
   }
 

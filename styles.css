@@ -351,28 +351,45 @@ h3 {
 }
 
 .hero-stat-card {
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(255, 249, 236, 0.14);
-  border: 2px solid rgba(255, 249, 236, 0.36);
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: rgba(255, 249, 236, 0.16);
+  border: 2px solid rgba(255, 249, 236, 0.42);
+  min-width: 120px;
+}
+
+/* The round card is the single most-asked "what am I looking at" stat in the
+   game. Bump its prominence above the leader card so testers stop searching. */
+.hero-stat-card.hero-stat-round {
+  background: rgba(214, 168, 60, 0.22);
+  border-color: rgba(214, 168, 60, 0.62);
 }
 
 .hero-stat-label {
   display: block;
-  margin-bottom: 4px;
-  font-size: 0.74rem;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
+  font-weight: 700;
 }
 
 .hero-stat-value {
-  font-size: 1.18rem;
-  font-weight: 700;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.hero-stat-card.hero-stat-round .hero-stat-value {
+  font-size: 1.85rem;
+  color: #fff7e1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
 }
 
 .main-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.16fr) minmax(340px, 400px);
+  grid-template-columns: minmax(0, 1.08fr) minmax(380px, 460px);
   gap: 22px;
   margin-top: 22px;
   align-items: start;
@@ -516,9 +533,16 @@ h3 {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 15px;
+  height: 22px;
   background: var(--space-accent, var(--gold));
   border-bottom: 2px solid rgba(31, 43, 58, 0.75);
+}
+
+/* Tint the entire square subtly with its category color so the board reads
+   at a glance. The tint is gentle so the cream paper aesthetic stays. */
+.board-space {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--space-accent, var(--gold)) 14%, rgba(255, 255, 255, 0.56)), rgba(247, 240, 223, 0.94));
 }
 
 .board-space.active {
@@ -533,23 +557,26 @@ h3 {
 }
 
 .space-badge {
-  margin-top: 10px;
+  margin-top: 14px;
   display: inline-flex;
   align-self: flex-start;
-  padding: 4px 8px;
+  padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(31, 43, 58, 0.1);
-  font-size: 0.7rem;
-  font-weight: 700;
+  background: color-mix(in srgb, var(--space-accent, var(--gold)) 32%, rgba(255, 255, 255, 0.85));
+  color: rgba(31, 43, 58, 0.92);
+  font-size: 0.74rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  border: 1px solid rgba(31, 43, 58, 0.18);
 }
 
 .space-name {
   margin: 8px 0 4px;
-  font-size: 0.88rem;
+  font-size: 1.02rem;
   line-height: 1.15;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.005em;
   /* No hyphens/break-word: let words wrap only at spaces. The two
      previously-too-long labels ("Emergency Fund", "Neighborhood Upgrade")
      were renamed to "Safety Net" and "Upgrade Home" so the widest label
@@ -571,9 +598,9 @@ h3 {
 }
 
 .space-index {
-  font-size: 0.74rem;
-  color: rgba(31, 43, 58, 0.55);
-  font-weight: 700;
+  font-size: 0.84rem;
+  color: rgba(31, 43, 58, 0.62);
+  font-weight: 800;
 }
 
 .token-stack {
@@ -581,26 +608,29 @@ h3 {
   flex-wrap: wrap;
   gap: 6px;
   justify-content: flex-end;
-  min-height: 34px;
+  min-height: 44px;
 }
 
 .token {
-  width: 31px;
-  height: 31px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.95);
+  border: 3px solid rgba(255, 255, 255, 0.96);
   color: #fff;
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 5px 9px rgba(31, 43, 58, 0.3);
+  box-shadow: 0 6px 12px rgba(31, 43, 58, 0.32);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 .token.current-token {
-  transform: scale(1.12);
-  box-shadow: 0 0 0 3px rgba(247, 240, 223, 0.92), 0 0 0 6px rgba(31, 68, 102, 0.32);
+  transform: scale(1.18);
+  box-shadow: 0 0 0 3px rgba(247, 240, 223, 0.95), 0 0 0 7px rgba(31, 68, 102, 0.42), 0 6px 14px rgba(31, 43, 58, 0.36);
+  z-index: 2;
+  position: relative;
 }
 
 .sidebar {
@@ -811,7 +841,7 @@ h3 {
 }
 
 .roadmap-panel {
-  padding: 14px 16px;
+  padding: 18px 20px 20px;
 }
 
 .roadmap-line {
@@ -851,16 +881,16 @@ h3 {
 }
 
 .roadmap-marker {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  border: 2px solid rgba(31, 43, 58, 0.18);
-  background: rgba(255, 255, 255, 0.74);
+  border: 2px solid rgba(31, 43, 58, 0.22);
+  background: rgba(255, 255, 255, 0.82);
   color: var(--ink);
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 800;
 }
 
@@ -872,7 +902,7 @@ h3 {
 
 .roadmap-copy strong {
   display: block;
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.2;
 }
 
@@ -880,8 +910,8 @@ h3 {
   display: block;
   margin-top: 4px;
   color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.3;
+  font-size: 0.86rem;
+  line-height: 1.35;
 }
 
 .roadmap-step.complete .roadmap-copy strong {
@@ -1455,6 +1485,26 @@ button.credit-flash-card {
     line-height: 1.15;
   }
 
+  .token {
+    width: 30px;
+    height: 30px;
+    font-size: 0.72rem;
+  }
+
+  .token-stack {
+    min-height: 32px;
+  }
+
+  .token {
+    width: 30px;
+    height: 30px;
+    font-size: 0.72rem;
+  }
+
+  .token-stack {
+    min-height: 32px;
+  }
+
   .turn-metrics {
     grid-template-columns: 1fr 1fr;
   }
@@ -2007,6 +2057,392 @@ body.in-game .hero-content {
 .toolbar-icon.active {
   background: rgba(215, 167, 61, 0.36);
   border-color: rgba(215, 167, 61, 0.72);
+}
+
+.toolbar-help {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.toolbar-help.help-pulse {
+  animation: helpPulse 1800ms ease-in-out 2;
+  background: rgba(215, 167, 61, 0.34);
+  border-color: rgba(215, 167, 61, 0.7);
+}
+
+@keyframes helpPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(215, 167, 61, 0); }
+  50% { box-shadow: 0 0 0 8px rgba(215, 167, 61, 0.18); }
+}
+
+/* Onboarding overlay — fires on round 1 and on demand from the ? button.
+   Lives in its own shell so it doesn't fight the decision-modal lifecycle. */
+.onboarding-shell {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 38, 0.62);
+  backdrop-filter: blur(4px);
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.onboarding-shell.hidden {
+  display: none;
+}
+
+.onboarding-card {
+  position: relative;
+  max-width: 720px;
+  width: 100%;
+  border-radius: 28px;
+  border: var(--border);
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.7), transparent 38%),
+    linear-gradient(160deg, rgba(247, 240, 223, 0.99), rgba(229, 213, 173, 0.98));
+  box-shadow: 0 30px 60px rgba(15, 23, 38, 0.42);
+  padding: 28px 30px 26px;
+  color: var(--ink);
+}
+
+.onboarding-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(31, 43, 58, 0.22);
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.onboarding-close:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(31, 43, 58, 0.4);
+}
+
+.onboarding-eyebrow {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal-deep);
+  font-weight: 700;
+}
+
+.onboarding-title {
+  margin: 6px 0 8px;
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 1.7rem;
+  line-height: 1.18;
+  color: var(--teal-deep);
+}
+
+.onboarding-lede {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.onboarding-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .onboarding-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.onboarding-tile {
+  position: relative;
+  padding: 16px 14px 14px;
+  border-radius: 18px;
+  border: 2px solid rgba(31, 43, 58, 0.16);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.onboarding-tile h3 {
+  margin: 6px 0 6px;
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.2;
+  color: var(--teal-deep);
+}
+
+.onboarding-tile p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.onboarding-tile-num {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.86rem;
+  letter-spacing: 0;
+}
+
+.onboarding-confirm {
+  margin-top: 22px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 16px;
+  border: 2px solid rgba(31, 43, 58, 0.85);
+  background: linear-gradient(180deg, #d49946, #b07522);
+  color: #fff9ec;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 140ms ease;
+}
+
+.onboarding-confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(31, 43, 58, 0.22);
+}
+
+.onboarding-confirm:active {
+  transform: translateY(1px);
+}
+
+/* Profile-aware prompt badge — fires when selectByProfile picked a
+   profile-specific variant rather than the default. The badge makes the
+   structural-difference lesson legible at the moment a player is reading
+   the prompt instead of leaving it implicit in stat changes. */
+.profile-variant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 10px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(214, 168, 60, 0.22), rgba(176, 117, 34, 0.28));
+  border: 1px solid rgba(176, 117, 34, 0.55);
+  color: #5d3e0d;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: help;
+}
+
+.profile-variant-badge::before {
+  content: "✦";
+  font-size: 0.78rem;
+  color: var(--gold);
+}
+
+.toolbar-help {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.toolbar-help.help-pulse {
+  animation: helpPulse 1800ms ease-in-out 2;
+  background: rgba(215, 167, 61, 0.34);
+  border-color: rgba(215, 167, 61, 0.7);
+}
+
+@keyframes helpPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(215, 167, 61, 0); }
+  50% { box-shadow: 0 0 0 8px rgba(215, 167, 61, 0.18); }
+}
+
+/* Onboarding overlay — fires on round 1 and on demand from the ? button.
+   Lives in its own shell so it doesn't fight the decision-modal lifecycle. */
+.onboarding-shell {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 38, 0.62);
+  backdrop-filter: blur(4px);
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.onboarding-shell.hidden {
+  display: none;
+}
+
+.onboarding-card {
+  position: relative;
+  max-width: 720px;
+  width: 100%;
+  border-radius: 28px;
+  border: var(--border);
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.7), transparent 38%),
+    linear-gradient(160deg, rgba(247, 240, 223, 0.99), rgba(229, 213, 173, 0.98));
+  box-shadow: 0 30px 60px rgba(15, 23, 38, 0.42);
+  padding: 28px 30px 26px;
+  color: var(--ink);
+}
+
+.onboarding-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(31, 43, 58, 0.22);
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.onboarding-close:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(31, 43, 58, 0.4);
+}
+
+.onboarding-eyebrow {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal-deep);
+  font-weight: 700;
+}
+
+.onboarding-title {
+  margin: 6px 0 8px;
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 1.7rem;
+  line-height: 1.18;
+  color: var(--teal-deep);
+}
+
+.onboarding-lede {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.onboarding-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .onboarding-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.onboarding-tile {
+  position: relative;
+  padding: 16px 14px 14px;
+  border-radius: 18px;
+  border: 2px solid rgba(31, 43, 58, 0.16);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.onboarding-tile h3 {
+  margin: 6px 0 6px;
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.2;
+  color: var(--teal-deep);
+}
+
+.onboarding-tile p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.onboarding-tile-num {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.86rem;
+  letter-spacing: 0;
+}
+
+.onboarding-confirm {
+  margin-top: 22px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 16px;
+  border: 2px solid rgba(31, 43, 58, 0.85);
+  background: linear-gradient(180deg, #d49946, #b07522);
+  color: #fff9ec;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 140ms ease;
+}
+
+.onboarding-confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(31, 43, 58, 0.22);
+}
+
+.onboarding-confirm:active {
+  transform: translateY(1px);
+}
+
+/* Profile-aware prompt badge — fires when selectByProfile picked a
+   profile-specific variant rather than the default. The badge makes the
+   structural-difference lesson legible at the moment a player is reading
+   the prompt instead of leaving it implicit in stat changes. */
+.profile-variant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 10px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(214, 168, 60, 0.22), rgba(176, 117, 34, 0.28));
+  border: 1px solid rgba(176, 117, 34, 0.55);
+  color: #5d3e0d;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: help;
+}
+
+.profile-variant-badge::before {
+  content: "✦";
+  font-size: 0.78rem;
+  color: var(--gold);
 }
 
 .toolbar-live-strip {
@@ -2723,124 +3159,4 @@ body.in-game .roadmap-copy span {
   }
 }
 
-.credit-hero-card.credit-pulse-up-small   { animation: credit-pulse-up-small   420ms cubic-bezier(0.2, 0.8, 0.3, 1); }
-.credit-hero-card.credit-pulse-up-med     { animation: credit-pulse-up-med     500ms cubic-bezier(0.2, 0.8, 0.3, 1); }
-.credit-hero-card.credit-pulse-up-huge    { animation: credit-pulse-up-huge    600ms cubic-bezier(0.2, 0.8, 0.3, 1); }
-.credit-hero-card.credit-pulse-down-small { animation: credit-pulse-down-small 420ms cubic-bezier(0.2, 0.8, 0.3, 1); }
-.credit-hero-card.credit-pulse-down-med   { animation: credit-pulse-down-med   500ms cubic-bezier(0.2, 0.8, 0.3, 1); }
-.credit-hero-card.credit-pulse-down-huge  { animation: credit-pulse-down-huge  600ms cubic-bezier(0.2, 0.8, 0.3, 1); }
-
-/* --- Wellbeing bar: smooth tier shift + pulse on big swings ---
-   Adds a background transition to the bar itself so the tier-color border
-   and background shift glide rather than hard-switch when the tier flips.
-   The existing .wellbeing-bar-fill already had a width transition; we add
-   background to it too so the fill gradient cross-fades on tier changes. */
-.wellbeing-bar {
-  transition: background 480ms ease, border-color 480ms ease, box-shadow 300ms ease;
-}
-.wellbeing-bar-fill {
-  transition: width 520ms cubic-bezier(0.2, 0.7, 0.3, 1), background 480ms ease;
-}
-
-@keyframes wellbeing-pulse-up {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(33, 109, 108, 0); }
-  40%      { box-shadow: 0 0 0 4px rgba(33, 109, 108, 0.24); }
-}
-@keyframes wellbeing-pulse-down {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(162, 79, 58, 0); }
-  40%      { box-shadow: 0 0 0 4px rgba(162, 79, 58, 0.24); }
-}
-.wellbeing-bar.wellbeing-pulse-up   { animation: wellbeing-pulse-up 520ms ease-out; }
-.wellbeing-bar.wellbeing-pulse-down { animation: wellbeing-pulse-down 520ms ease-out; }
-
-/* --- Freedom chip: ✗→✓ gold celebration ---
-   Only triggers for chips that flipped this render. Warm amber glow +
-   brief scale bump — 720ms, tasteful. */
-@keyframes chip-just-met {
-  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(168, 116, 32, 0); }
-  35%  { transform: scale(1.14); box-shadow: 0 0 0 6px rgba(168, 116, 32, 0.34), 0 2px 8px rgba(168, 116, 32, 0.26); }
-  70%  { transform: scale(1.04); box-shadow: 0 0 0 3px rgba(168, 116, 32, 0.18); }
-  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(168, 116, 32, 0); }
-}
-.freedom-chip.chip-just-met {
-  animation: chip-just-met 720ms cubic-bezier(0.25, 1.1, 0.35, 1);
-}
-
-/* --- Turn panel setback: tight shake + restrained red-clay wash ---
-   2-3 oscillations on X axis; background color rises to a muted clay
-   tint at the peak and clears by the end. "Dignity under pressure" —
-   strong enough to register, not arcade-like. Triggered on credit or
-   wellbeing drop ≥10. */
-@keyframes panel-setback {
-  0%   { transform: translateX(0);    background-color: transparent; }
-  10%  { transform: translateX(-4px); background-color: rgba(162, 79, 58, 0.08); }
-  25%  { transform: translateX(4px);  background-color: rgba(162, 79, 58, 0.1); }
-  40%  { transform: translateX(-3px); background-color: rgba(162, 79, 58, 0.08); }
-  55%  { transform: translateX(2px);  background-color: rgba(162, 79, 58, 0.05); }
-  70%  { transform: translateX(-1px); background-color: rgba(162, 79, 58, 0.02); }
-  100% { transform: translateX(0);    background-color: transparent; }
-}
-.turn-panel.panel-setback {
-  animation: panel-setback 480ms cubic-bezier(0.35, 0.7, 0.4, 1);
-}
-
-/* --- Table Talk: soft warm-tint fade on new entries ---
-   Warm amber tint lands when the entry is first rendered, then decays
-   to the resting card style over ~820ms. No scale or move — just a
-   quiet signal that "this is the new thing." */
-@keyframes event-just-arrived {
-  0%   { background: rgba(255, 228, 168, 0.78); border-color: rgba(168, 116, 32, 0.42); }
-  30%  { background: rgba(255, 232, 186, 0.55); border-color: rgba(168, 116, 32, 0.3); }
-  100% { background: rgba(255, 255, 255, 0.52); border-color: rgba(31, 43, 58, 0.12); }
-}
-.event-entry.just-arrived {
-  animation: event-just-arrived 820ms ease-out;
-}
-
-@keyframes spotlight-just-arrived {
-  0%   { box-shadow: 0 0 0 3px rgba(168, 116, 32, 0.3); }
-  100% { box-shadow: 0 0 0 0 rgba(168, 116, 32, 0); }
-}
-.event-spotlight-card.just-arrived {
-  animation: spotlight-just-arrived 820ms ease-out;
-}
-
-/* --- Button press states ---
-   Tactile scale-down on mousedown, crisp release. Applied only when not
-   disabled so locked buttons don't feel interactive. Roll Dice gets a
-   slightly deeper scale + shadow pullback so the press reads as "heavier"
-   than the satellite button. */
-.primary-button:active:not(:disabled),
-.secondary-button:active:not(:disabled),
-.option-button:active:not(:disabled) {
-  transform: translateY(0) scale(0.975);
-  transition: transform 80ms ease-out, box-shadow 80ms ease-out;
-}
-.primary-button.roll-hero:active:not(:disabled) {
-  transform: translateY(0) scale(0.97);
-  box-shadow: 0 6px 14px rgba(168, 116, 32, 0.32);
-}
-.secondary-button.hint-satellite:active:not(:disabled) {
-  transform: translateY(0) scale(0.975);
-  box-shadow: 0 2px 6px rgba(31, 43, 58, 0.14);
-}
-
-@media (max-width: 820px) {
-  .dice-scene {
-    width: 150px;
-    height: 150px;
-  }
-  .dice-cube {
-    width: 100px;
-    height: 100px;
-  }
-  .dice-face {
-    padding: 12px;
-  }
-  .dice-face-1 { transform: translateZ(50px); }
-  .dice-face-6 { transform: rotateY(180deg) translateZ(50px); }
-  .dice-face-3 { transform: rotateY(90deg) translateZ(50px); }
-  .dice-face-4 { transform: rotateY(-90deg) translateZ(50px); }
-  .dice-face-2 { transform: rotateX(90deg) translateZ(50px); }
-  .dice-face-5 { transform: rotateX(-90deg) translateZ(50px); }
-}
+.credit-hero-card.credit-pulse-up-small   { animation: credit-pulse-up-small   420ms cubic
