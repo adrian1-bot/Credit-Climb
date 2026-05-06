@@ -1,27 +1,22 @@
 # Credit Climb
 
-A browser-based multiplayer board game teaching credit scores, debt management, 
-and the slow climb to financial stability. Built as a partner project for 
-**WED ED 315 — Gamifying Learning** at Boston University.
+A browser-based multiplayer board game teaching credit scores, debt management, and the slow climb to financial stability. Built as an individual project for ED 315 — Gamifying Learning at Boston University Wheelock.
 
-🎮 **Play live:** https://credit-climb-live.onrender.com/
+🎮 Play live: **https://credit-climb-live.onrender.com/**
 
 ## What it teaches
 
-Players roll dice, manage income against bills, decide between predatory and 
-prudent financial choices (housing, transportation, loans, savings), and 
-race toward Financial Freedom — a credit score above 750, stable housing, 
-manageable debt, and emergency savings. The game embeds real consumer-finance 
-mechanics (utilization rates, late payments, predatory lending traps) into 
-a turn-based competition.
+Players roll dice, manage income against bills, and decide between socially tempting and financially prudent choices (housing, transportation, loans, savings, the Thursday-night dinner) while racing toward Financial Freedom. The game embeds real consumer-finance mechanics — utilization rates, late payments, credit-tier pricing, predatory lending traps — into a 15-round turn-based competition.
 
 ## Design philosophy
 
-The course brief asked for a learning experience that *felt* like a game 
-rather than a worksheet pretending to be one. Credit Climb leans into 
-this by making bad financial decisions tactically tempting in the short term 
-(a high-rate loan really does let you reach a milestone faster) while 
-penalizing them through the credit score and long-term wealth mechanics.
+The course brief asked for a learning experience that felt like a game rather than a worksheet pretending to be one. Credit Climb leans into three load-bearing rules:
+
+- **The Dilemma Rule.** Every choice is a trade-off. The fun option usually costs you Cash or Credit; the boring option usually costs you Wellbeing. There is no obviously-correct answer — only what you're willing to give up.
+- **Asymmetric reality math.** Responsible actions earn +2 to +5 credit points. One missed payment costs −30 to −60. Building is slow. Breaking is fast.
+- **Profile inequality.** The five starting profiles — Strong Family Support, No Financial Safety Net, Scholarship Student, Medical Expense Burden, Community Mentor Network — set deliberately unequal starting cash, debt, and wellbeing. They are not difficulty settings; they are different starting points in the same system.
+
+A short three-card onboarding overlay fires on first run to explain these rules in-context. The `?` button in the top-right reopens it any time.
 
 ## Run It Locally
 
@@ -43,7 +38,7 @@ The host is the authoritative session owner, so if a player disconnects the host
 
 ## Deploy For A Public Link
 
-Live multiplayer needs a Node host that supports WebSockets. GitHub Pages alone is **not** enough for live rooms.
+Live multiplayer needs a Node host that supports WebSockets. GitHub Pages alone is not enough for live rooms.
 
 ### Render
 
@@ -60,38 +55,42 @@ This folder includes `render.yaml`, so Render can deploy it as a web service.
 
 Railway, Fly.io, and similar Node-friendly hosts should also work as long as they support WebSockets and run `npm start`.
 
-## Static Preview
+### Static Preview
 
 The existing `.github/workflows/deploy-pages.yml` workflow can still publish a static browser copy for solo or hot-seat play, but that static deployment will not support live rooms.
 
 ## How To Play
 
-- Enter your name.
+- Enter your name and pick a Profile.
 - Use `Create Room` or `Join Room` for live multiplayer, or stay in local mode for hot-seat play.
 - Choose how many AI rivals you want.
 - Click `Start Live Game` or `Deal the Board`.
 - On your turn, click `Roll Dice`.
-- Land on spaces to make financial choices about credit, housing, transportation, savings, loans, and growth.
-- Reach `Financial Freedom` before the other players or AI rivals.
+- Land on spaces to make decisions about credit, housing, transportation, savings, loans, growth, and life events.
+- Reach Financial Freedom before the other players, or hold the highest Freedom Progress score when the 15-round turn cap hits.
 
-The center of the board acts as the shared table feed, so everyone can follow the latest landing, decision, and setback.
+The center of the board is the shared Table Talk feed — every roll, decision, and consequence is logged there so everyone can follow what happens at the table, not just what happens to them.
 
 ## Win Conditions
 
-You win when you complete all of these:
+The game ends one of two ways, whichever comes first.
 
-- `Stability`: stable housing and at least `$500` in emergency savings
-- `Mobility`: transportation that is not a debt trap
-- `Growth`: at least one wealth-building asset
-- `Security`: `750+` credit score and at least one crisis survived without missing a payment
-- `Savings Goal`: `+$4,000` in combined cash and emergency savings
-- `Debt Under Control`: `-$4,000` or less total debt
+**Financial Freedom Victory.** A player simultaneously holds:
+
+- Credit Score 720 or higher
+- Stable Housing milestone completed
+- Emergency Fund of $1,500 or more
+- Total Debt at or below $500 (or below 25% of starting debt, whichever is lower — this clause keeps the harder-starting profiles winnable)
+
+**Turn Cap.** After 15 rounds, the game ends and the winner is decided by a composite **Freedom Progress** score — Credit Score 40%, Net Worth 30%, Milestones Completed 20%, Emergency Fund 10%. This score is shown every turn, so players know where they stand at all times. Most playtest games will end this way, and the composite ending is treated as a first-class ending, not a consolation.
 
 ## Design Notes
 
-The implementation makes a few concrete rules from the PDF so the game is fully playable:
+- Each turn covers income, recurring bill payments, credit updates from utilization and missed marks, and a dice roll.
+- Credit operates as a tier system that prices access, not just gates it. A Fair-credit player can still rent and finance a phone, but pays more for each — bad credit is a tax, not a door.
+- Wellbeing is its own stat. Choices that protect finances often cost Wellbeing; choices that hurt finances often raise it. This is what gives the Dilemma Rule its emotional weight.
+- Profile-specific prompt variants change the wording (and sometimes the available options) of certain decisions based on which profile is playing — same prompt, different meaning. A small badge in the prompt modal signals when this is happening.
 
-- each turn includes income, bill payments, credit updates, and a dice roll
-- higher credit unlocks stronger housing, vehicle, and growth options
-- predatory loans and bad transport deals can block your progress
-- missions reward healthy financial behavior like low utilization and on-time payments
+## Course Context
+
+Built solo for **ED 315 — Gamifying Learning** at **Boston University Wheelock College of Education and Human Development**, Spring 2026, taught by Dr. Greg Benoit. AI-assisted development was explicitly part of the course brief.
