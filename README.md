@@ -1,6 +1,27 @@
 # Credit Climb
 
-`Credit Climb` is a browser board game built with plain HTML, CSS, JavaScript, and a lightweight Node/WebSocket server for live rooms.
+A browser-based multiplayer board game teaching credit scores, debt management, 
+and the slow climb to financial stability. Built as a partner project for 
+**WED ED 315 — Gamifying Learning** at Boston University.
+
+🎮 **Play live:** https://credit-climb-live.onrender.com/
+
+## What it teaches
+
+Players roll dice, manage income against bills, decide between predatory and 
+prudent financial choices (housing, transportation, loans, savings), and 
+race toward Financial Freedom — a credit score above 750, stable housing, 
+manageable debt, and emergency savings. The game embeds real consumer-finance 
+mechanics (utilization rates, late payments, predatory lending traps) into 
+a turn-based competition.
+
+## Design philosophy
+
+The course brief asked for a learning experience that *felt* like a game 
+rather than a worksheet pretending to be one. Credit Climb leans into 
+this by making bad financial decisions tactically tempting in the short term 
+(a high-rate loan really does let you reach a milestone faster) while 
+penalizing them through the credit score and long-term wealth mechanics.
 
 ## Run It Locally
 
